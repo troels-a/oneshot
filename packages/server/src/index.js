@@ -9,11 +9,14 @@ const healthRouter = require('./routes/health');
 const agentsRouter = require('./routes/agents');
 const jobsRouter = require('./routes/jobs');
 const schedulesRouter = require('./routes/schedules');
+const statsRouter = require('./routes/stats');
+const createAuthRouter = require('./routes/auth');
 
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
   const logsDir = options.logsDir || path.join(__dirname, '..', 'logs');
   const apiKey = process.env.API_KEY;
+  const dashboardPassword = process.env.DASHBOARD_PASSWORD;
 
   const manager = new JobManager({ logsDir, agentsDir });
   const schedulesFile = options.schedulesFile || path.join(__dirname, '..', 'schedules.json');
@@ -23,8 +26,9 @@ function createApp(options = {}) {
   const app = express();
   app.use(express.json());
 
-  // Health — no auth
+  // Health + login — no auth
   app.use(healthRouter);
+  app.use(createAuthRouter({ apiKey, dashboardPassword }));
 
   // Auth for everything else
   app.use(createAuthMiddleware(apiKey));
@@ -40,6 +44,7 @@ function createApp(options = {}) {
   app.use(agentsRouter);
   app.use(schedulesRouter);
   app.use(jobsRouter);
+  app.use(statsRouter);
 
   // Error handler
   app.use((err, req, res, next) => {

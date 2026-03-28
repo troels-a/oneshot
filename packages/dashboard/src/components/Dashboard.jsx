@@ -3,8 +3,28 @@ import { fetchAgents, fetchJobs, fetchSchedules, stopJob } from '../api';
 
 const REFRESH_INTERVAL = 5000;
 
-export default function Dashboard({ onSelectJob }) {
-  const [tab, setTab] = useState('jobs');
+function timeAgo(iso) {
+  if (!iso) return '-';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function statusBadge(status) {
+  const cls = {
+    running: 'badge-running',
+    completed: 'badge-completed',
+    failed: 'badge-failed',
+    pending: 'badge-pending',
+  }[status] || '';
+  return <span className={`badge ${cls}`}>{status}</span>;
+}
+
+export default function Dashboard({ tab, onSelectJob }) {
   const [agents, setAgents] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -44,48 +64,16 @@ export default function Dashboard({ onSelectJob }) {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  function statusBadge(status) {
-    const cls = {
-      running: 'badge-running',
-      completed: 'badge-completed',
-      failed: 'badge-failed',
-      pending: 'badge-pending',
-    }[status] || '';
-    return <span className={`badge ${cls}`}>{status}</span>;
-  }
-
-  function timeAgo(iso) {
-    if (!iso) return '-';
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  }
-
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
-    <div className="dashboard">
-      <nav className="tabs">
-        {['jobs', 'agents', 'schedules'].map((t) => (
-          <button
-            key={t}
-            className={`tab ${tab === t ? 'tab-active' : ''}`}
-            onClick={() => setTab(t)}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-            {t === 'jobs' && <span className="tab-count">{jobs.length}</span>}
-            {t === 'agents' && <span className="tab-count">{agents.length}</span>}
-            {t === 'schedules' && <span className="tab-count">{schedules.length}</span>}
-          </button>
-        ))}
-      </nav>
-
+    <div>
       {tab === 'jobs' && (
-        <div className="section">
+        <div className="glass-card">
+          <div className="section-header" style={{ marginBottom: 16 }}>
+            <span className="section-title">Jobs</span>
+            <span className="section-badge">{jobs.length} total</span>
+          </div>
           <div className="filters">
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All statuses</option>
@@ -104,7 +92,7 @@ export default function Dashboard({ onSelectJob }) {
           {jobs.length === 0 ? (
             <p className="empty">No jobs found</p>
           ) : (
-            <table>
+            <table className="glass-table">
               <thead>
                 <tr>
                   <th>Agent</th>
@@ -117,9 +105,9 @@ export default function Dashboard({ onSelectJob }) {
               <tbody>
                 {jobs.map((job) => (
                   <tr key={job.id} className="clickable" onClick={() => onSelectJob(job.id)}>
-                    <td>{job.agentName}</td>
+                    <td style={{ fontWeight: 500 }}>{job.agentName}</td>
                     <td>{statusBadge(job.status)}</td>
-                    <td>{timeAgo(job.startedAt)}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(job.startedAt)}</td>
                     <td className="mono">{job.id.slice(0, 8)}</td>
                     <td>
                       {job.status === 'running' && (
@@ -143,7 +131,7 @@ export default function Dashboard({ onSelectJob }) {
       )}
 
       {tab === 'agents' && (
-        <div className="section">
+        <div>
           {agents.length === 0 ? (
             <p className="empty">No agents found</p>
           ) : (
@@ -170,11 +158,15 @@ export default function Dashboard({ onSelectJob }) {
       )}
 
       {tab === 'schedules' && (
-        <div className="section">
+        <div className="glass-card">
+          <div className="section-header" style={{ marginBottom: 16 }}>
+            <span className="section-title">Schedules</span>
+            <span className="section-badge">{schedules.length} total</span>
+          </div>
           {schedules.length === 0 ? (
             <p className="empty">No schedules found</p>
           ) : (
-            <table>
+            <table className="glass-table">
               <thead>
                 <tr>
                   <th>Agent</th>
@@ -188,11 +180,11 @@ export default function Dashboard({ onSelectJob }) {
               <tbody>
                 {schedules.map((s) => (
                   <tr key={s.id}>
-                    <td>{s.agent}</td>
+                    <td style={{ fontWeight: 500 }}>{s.agent}</td>
                     <td className="mono">{s.cron}</td>
                     <td>{s.enabled ? 'Yes' : 'No'}</td>
-                    <td>{timeAgo(s.lastRunAt)}</td>
-                    <td>{s.nextRunAt ? new Date(s.nextRunAt).toLocaleString() : '-'}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(s.lastRunAt)}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{s.nextRunAt ? new Date(s.nextRunAt).toLocaleString() : '-'}</td>
                     <td>{s.lastRunResult || '-'}</td>
                   </tr>
                 ))}

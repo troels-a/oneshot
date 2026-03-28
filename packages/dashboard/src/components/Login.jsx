@@ -21,19 +21,21 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-container">
+      <div className="bg-blob-1" />
+      <div className="bg-blob-2" />
       <div className="login-card">
         <h1>oneshot</h1>
-        <p className="login-subtitle">Enter your API key to continue</p>
+        <p className="login-subtitle">Enter your password to continue</p>
         <form onSubmit={handleSubmit}>
           <input
             type="password"
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            placeholder="API Key"
+            placeholder="Password"
             autoFocus
           />
           {error && <p className="error">{error}</p>}
-          <button className="btn" type="submit" disabled={loading}>
+          <button className="btn btn-dark" type="submit" disabled={loading}>
             {loading ? 'Verifying...' : 'Login'}
           </button>
         </form>

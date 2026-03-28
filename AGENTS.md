@@ -145,5 +145,6 @@ npm test                  # Run all tests
 
 Configure in `.env` (see `.env.example`):
 - `API_KEY` — Bearer token for API auth (required for server)
+- `DASHBOARD_PASSWORD` — Password for dashboard login (required for server)
 - `PORT` — Server port (default: 3000)
 - `ONESHOT_AGENTS_DIR` — Path to agents directory (default: ./agents)

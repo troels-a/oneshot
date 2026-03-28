@@ -73,7 +73,21 @@ export async function stopJob(id) {
   return res.json();
 }
 
-export async function validateKey() {
-  const res = await request('/agents');
-  return res.ok;
+export async function fetchStats() {
+  const res = await request('/stats');
+  return res.json();
+}
+
+export async function login(password) {
+  const res = await fetch(`${BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || 'Login failed');
+  }
+  const { token } = await res.json();
+  return token;
 }

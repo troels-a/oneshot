@@ -89,7 +89,7 @@ export default function JobDetail({ jobId, onBack }) {
 
   return (
     <div className="job-detail">
-      <button className="btn btn-sm" onClick={onBack}>Back</button>
+      <button className="btn btn-glass btn-sm" onClick={onBack}>Back</button>
 
       <div className="job-info">
         <h2>{job.agentName}</h2>

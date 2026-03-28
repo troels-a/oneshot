@@ -34,15 +34,17 @@ async function main() {
     skipEnv = overwrite.toLowerCase() !== 'y';
   }
 
-  let apiKey, port, agentsDir;
+  let apiKey, dashboardPassword, port, agentsDir;
 
   if (!skipEnv) {
     const genKey = randomBytes(24).toString('base64url');
     apiKey = await ask(`  API key [${genKey}]: `, genKey);
+    const genPassword = randomBytes(16).toString('base64url');
+    dashboardPassword = await ask(`  Dashboard password [${genPassword}]: `, genPassword);
     port = await ask('  Server port [3000]: ', '3000');
     agentsDir = await ask('  Agents directory [./agents]: ', './agents');
 
-    writeFileSync(envPath, `API_KEY=${apiKey}\nPORT=${port}\nONESHOT_AGENTS_DIR=${agentsDir}\n`);
+    writeFileSync(envPath, `API_KEY=${apiKey}\nDASHBOARD_PASSWORD=${dashboardPassword}\nPORT=${port}\nONESHOT_AGENTS_DIR=${agentsDir}\n`);
     console.log('\n  .env written ✓');
   } else {
     console.log('  Keeping existing .env ✓');
