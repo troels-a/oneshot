@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const readline = require('readline');
-const { writeFileSync, existsSync, mkdirSync } = require('fs');
+const { readFileSync, writeFileSync, existsSync, mkdirSync } = require('fs');
 const { randomBytes } = require('crypto');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -46,7 +46,9 @@ async function main() {
     console.log('\n  .env written ✓');
   } else {
     console.log('  Keeping existing .env ✓');
-    agentsDir = './agents';
+    const existing = readFileSync(envPath, 'utf8');
+    const match = existing.match(/^ONESHOT_AGENTS_DIR=(.+)$/m);
+    agentsDir = match ? match[1].trim() : './agents';
   }
 
   // 3. Create agents directory
