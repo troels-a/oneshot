@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "workspaces": ["packages/*"],
   "scripts": {
+    "setup": "node setup.js",
     "api": "npm run dev --workspace=packages/server",
     "dashboard": "npm run dev --workspace=packages/dashboard",
     "start": "npm run api & npm run dashboard &",
