@@ -1,0 +1,10 @@
+{
+  "name": "@oneshot/cli",
+  "version": "0.0.1",
+  "bin": {
+    "oneshot": "./bin/oneshot.js"
+  },
+  "dependencies": {
+    "@oneshot/core": "*"
+  }
+}

@@ -1,0 +1,7 @@
+agents/
+node_modules/
+.env
+dist/
+logs/
+schedules.json
+*.log

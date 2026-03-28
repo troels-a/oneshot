@@ -1,0 +1,12 @@
+{
+  "name": "oneshot",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "api": "npm run dev --workspace=packages/server",
+    "dashboard": "npm run dev --workspace=packages/dashboard",
+    "start": "npm run api & npm run dashboard &",
+    "test": "npm test --workspaces --if-present"
+  }
+}
