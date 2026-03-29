@@ -5,6 +5,11 @@ function validateBody(body) {
       errors.push('timeout must be a positive number (seconds), max 86400');
     }
   }
+  if (body.path !== undefined) {
+    if (typeof body.path !== 'string' || !body.path.length) {
+      errors.push('path must be a non-empty string');
+    }
+  }
   if (body.args !== undefined) {
     if (typeof body.args !== 'object' || body.args === null || Array.isArray(body.args)) {
       errors.push('args must be a plain object');

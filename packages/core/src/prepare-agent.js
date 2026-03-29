@@ -8,7 +8,7 @@ const buildCommand = require('./build-command');
 function prepareAgent(agentDir, providedArgs = {}) {
   const config = parseAgentMd(path.join(agentDir, 'agent.md'));
   const mergedArgs = validateArgs(config.args, providedArgs);
-  const commandResults = runCommands(config.commands, agentDir);
+  const commandResults = runCommands(config.commands, agentDir, mergedArgs);
   const renderedPrompt = renderTemplate(config.body, mergedArgs, commandResults);
   const command = buildCommand(config.entrypoint, agentDir, renderedPrompt, mergedArgs);
   return { config, mergedArgs, renderedPrompt, command };

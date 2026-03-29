@@ -8,4 +8,6 @@ module.exports = {
   prepareAgent: require('./prepare-agent'),
   JobManager: require('./job-manager'),
   resolveAgentsDir: require('./resolve-agents-dir'),
+  resolveWorkspaceDir: require('./resolve-workspace-dir'),
+  resolveCwd: require('./resolve-cwd'),
 };

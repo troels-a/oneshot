@@ -3,6 +3,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { mkdirSync, readdirSync, statSync, rmSync, createWriteStream } = require('fs');
 const prepareAgent = require('./prepare-agent');
+const resolveCwd = require('./resolve-cwd');
 
 const MAX_COMPLETED_JOBS = 1000;
 
@@ -39,6 +40,8 @@ class JobManager {
     const providedArgs = options.args && typeof options.args === 'object' ? options.args : {};
     const { config, command } = prepareAgent(agentDir, providedArgs);
 
+    const cwd = resolveCwd(agentDir, options.path);
+
     const id = randomUUID();
     const job = {
       id,
@@ -53,6 +56,7 @@ class JobManager {
       options: {
         timeout: options.timeout ?? null,
         args: Object.keys(providedArgs).length ? providedArgs : null,
+        path: options.path ?? null,
       },
       logDir: path.join(this.logsDir, id),
     };
@@ -66,7 +70,7 @@ class JobManager {
 
     const child = spawn(cmd, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      cwd: agentDir,
+      cwd,
     });
 
     child.stdout.pipe(stdoutStream);

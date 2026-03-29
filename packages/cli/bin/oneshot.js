@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { spawn } = require('child_process');
-const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir, resolveCwd } = require('@oneshot/core');
 
 const agentsDir = resolveAgentsDir();
 const [,, command, ...rest] = process.argv;
@@ -11,7 +11,7 @@ if (!command || command === 'help' || command === '--help') {
   console.log(`Usage:
   oneshot list                         List available agents
   oneshot info <agent>                 Show agent details
-  oneshot run <agent> [--key=value]    Run an agent`);
+  oneshot run <agent> [--key=value] [--path=dir]    Run an agent`);
   process.exit(0);
 }
 
@@ -67,19 +67,22 @@ if (command === 'run') {
   // Parse --key=value and --key value pairs
   const providedArgs = {};
   let timeout = null;
+  let runPath = null;
   for (let i = 1; i < rest.length; i++) {
     const arg = rest[i];
     if (arg.startsWith('--')) {
       const eqIndex = arg.indexOf('=');
+      let key, value;
       if (eqIndex !== -1) {
-        const key = arg.slice(2, eqIndex);
-        const value = arg.slice(eqIndex + 1);
-        if (key === 'timeout') { timeout = Number(value); } else { providedArgs[key] = value; }
+        key = arg.slice(2, eqIndex);
+        value = arg.slice(eqIndex + 1);
       } else {
-        const key = arg.slice(2);
-        const value = rest[++i] || '';
-        if (key === 'timeout') { timeout = Number(value); } else { providedArgs[key] = value; }
+        key = arg.slice(2);
+        value = rest[++i] || '';
       }
+      if (key === 'timeout') { timeout = Number(value); }
+      else if (key === 'path') { runPath = value; }
+      else { providedArgs[key] = value; }
     }
   }
 
@@ -88,9 +91,11 @@ if (command === 'run') {
   try {
     const { command } = prepareAgent(agentDir, providedArgs);
 
+    const cwd = resolveCwd(agentDir, runPath);
+
     const child = spawn(command.cmd, command.args, {
       stdio: 'inherit',
-      cwd: agentDir,
+      cwd,
     });
 
     if (timeout) {
