@@ -41,6 +41,7 @@ async function main() {
   if (!existing.DASHBOARD_PASSWORD) missing.push('DASHBOARD_PASSWORD');
   if (!existing.PORT) missing.push('PORT');
   if (!existing.ONESHOT_AGENTS_DIR) missing.push('ONESHOT_AGENTS_DIR');
+  if (!existing.ONESHOT_WORKSPACE_DIR) missing.push('ONESHOT_WORKSPACE_DIR');
 
   if (missing.length === 0) {
     console.log('  .env already configured ✓');
@@ -63,21 +64,31 @@ async function main() {
     if (!existing.ONESHOT_AGENTS_DIR) {
       existing.ONESHOT_AGENTS_DIR = await ask('  Agents directory [./agents]: ', './agents');
     }
+    if (!existing.ONESHOT_WORKSPACE_DIR) {
+      existing.ONESHOT_WORKSPACE_DIR = await ask('  Workspace directory (base for dispatch --path) []: ', '');
+    }
 
-    writeFileSync(envPath, `API_KEY=${existing.API_KEY}\nDASHBOARD_PASSWORD=${existing.DASHBOARD_PASSWORD}\nPORT=${existing.PORT}\nONESHOT_AGENTS_DIR=${existing.ONESHOT_AGENTS_DIR}\n`);
+    writeFileSync(envPath, `API_KEY=${existing.API_KEY}\nDASHBOARD_PASSWORD=${existing.DASHBOARD_PASSWORD}\nPORT=${existing.PORT}\nONESHOT_AGENTS_DIR=${existing.ONESHOT_AGENTS_DIR}\nONESHOT_WORKSPACE_DIR=${existing.ONESHOT_WORKSPACE_DIR}\n`);
     console.log('\n  .env written ✓');
   }
 
   const agentsDir = existing.ONESHOT_AGENTS_DIR || './agents';
 
-  // 3. Create agents directory
+  // 3. Create .oneshot runtime directory
+  const oneshotDir = path.join(ROOT, '.oneshot', 'logs');
+  if (!existsSync(oneshotDir)) {
+    mkdirSync(oneshotDir, { recursive: true });
+    console.log('  Created .oneshot/ ✓');
+  }
+
+  // 4. Create agents directory
   const resolvedAgentsDir = path.resolve(ROOT, agentsDir);
   if (!existsSync(resolvedAgentsDir)) {
     mkdirSync(resolvedAgentsDir, { recursive: true });
     console.log(`  Created ${agentsDir}/ ✓`);
   }
 
-  // 4. npm install if needed
+  // 5. npm install if needed
   if (!existsSync(path.join(ROOT, 'node_modules'))) {
     console.log('\n  Running npm install...');
     execSync('npm install', { cwd: ROOT, stdio: 'inherit' });
@@ -86,7 +97,7 @@ async function main() {
     console.log('  Dependencies already installed ✓');
   }
 
-  // 5. Done
+  // 6. Done
   console.log(`
   ───────────────────────────────────────
   Setup complete! Next steps:
