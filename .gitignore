@@ -2,8 +2,7 @@ agents/
 node_modules/
 .env
 dist/
-logs/
-schedules.json
+.oneshot/
 *.log
 .claude/
 docs/

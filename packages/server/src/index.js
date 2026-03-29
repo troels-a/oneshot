@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
 const { JobManager, resolveAgentsDir } = require('@oneshot/core');
@@ -12,14 +13,18 @@ const schedulesRouter = require('./routes/schedules');
 const statsRouter = require('./routes/stats');
 const createAuthRouter = require('./routes/auth');
 
+const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
+
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
-  const logsDir = options.logsDir || path.join(__dirname, '..', 'logs');
+  const logsDir = options.logsDir || path.join(ROOT_DATA_DIR, 'logs');
   const apiKey = process.env.API_KEY;
   const dashboardPassword = process.env.DASHBOARD_PASSWORD;
 
+  mkdirSync(logsDir, { recursive: true });
+
   const manager = new JobManager({ logsDir, agentsDir });
-  const schedulesFile = options.schedulesFile || path.join(__dirname, '..', 'schedules.json');
+  const schedulesFile = options.schedulesFile || path.join(ROOT_DATA_DIR, 'schedules.json');
   const scheduler = new Scheduler({ jobManager: manager, schedulesFile, agentsDir });
   scheduler.loadFromDisk();
 
