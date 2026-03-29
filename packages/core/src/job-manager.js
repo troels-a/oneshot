@@ -38,9 +38,8 @@ class JobManager {
   async dispatchJob(agentName, options = {}) {
     const agentDir = path.join(this.agentsDir, agentName);
     const providedArgs = options.args && typeof options.args === 'object' ? options.args : {};
-    const { config, command } = prepareAgent(agentDir, providedArgs);
-
     const cwd = resolveCwd(agentDir, options.path);
+    const { config, command } = prepareAgent(agentDir, providedArgs, cwd);
 
     const id = randomUUID();
     const job = {

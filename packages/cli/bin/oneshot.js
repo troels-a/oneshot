@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 const { spawn } = require('child_process');
 const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir, resolveCwd } = require('@oneshot/core');
 
@@ -89,9 +90,8 @@ if (command === 'run') {
   const agentDir = path.join(agentsDir, name);
 
   try {
-    const { command } = prepareAgent(agentDir, providedArgs);
-
     const cwd = resolveCwd(agentDir, runPath);
+    const { command } = prepareAgent(agentDir, providedArgs, cwd);
 
     const child = spawn(command.cmd, command.args, {
       stdio: 'inherit',

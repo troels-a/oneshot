@@ -5,6 +5,7 @@
     "oneshot": "./bin/oneshot.js"
   },
   "dependencies": {
-    "@oneshot/core": "*"
+    "@oneshot/core": "*",
+    "dotenv": "^17.3.1"
   }
 }
