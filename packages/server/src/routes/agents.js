@@ -3,6 +3,20 @@ const { discoverAgents } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody } = require('../lib/validate-dispatch-options');
 
+const RESERVED_KEYS = new Set(['args', 'path', 'timeout']);
+
+function normalizeBody(body) {
+  if (body.args || Object.keys(body).every(k => RESERVED_KEYS.has(k))) {
+    return body;
+  }
+  const { path, timeout, ...args } = body;
+  const normalized = {};
+  if (path !== undefined) normalized.path = path;
+  if (timeout !== undefined) normalized.timeout = timeout;
+  if (Object.keys(args).length) normalized.args = args;
+  return normalized;
+}
+
 const router = Router();
 
 router.get('/agents', (req, res) => {
@@ -19,7 +33,7 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
     const { agent } = req.params;
     const manager = req.jobManager;
 
-    const body = req.body || {};
+    const body = normalizeBody(req.body || {});
     const errors = validateBody(body);
     if (errors.length) {
       return res.status(400).json({ error: errors.join('; ') });
@@ -35,6 +49,9 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
   } catch (err) {
     if (err.code === 'ENOENT') {
       return res.status(404).json({ error: 'Agent not found' });
+    }
+    if (err.message && err.message.startsWith('Missing required argument:')) {
+      return res.status(400).json({ error: err.message });
     }
     next(err);
   }
