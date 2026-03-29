@@ -25,33 +25,50 @@ async function main() {
   }
   console.log(`  Node.js ${process.versions.node} ✓\n`);
 
-  // 2. .env setup
+  // 2. .env setup — read existing values and only prompt for missing ones
   const envPath = path.join(ROOT, '.env');
-  let skipEnv = false;
+  const existing = {};
 
   if (existsSync(envPath)) {
-    const overwrite = await ask('  .env already exists. Overwrite? [y/N] ', 'n');
-    skipEnv = overwrite.toLowerCase() !== 'y';
+    for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+      const m = line.match(/^([A-Z_]+)=(.*)$/);
+      if (m) existing[m[1]] = m[2].trim();
+    }
   }
 
-  let apiKey, dashboardPassword, port, agentsDir;
+  const missing = [];
+  if (!existing.API_KEY) missing.push('API_KEY');
+  if (!existing.DASHBOARD_PASSWORD) missing.push('DASHBOARD_PASSWORD');
+  if (!existing.PORT) missing.push('PORT');
+  if (!existing.ONESHOT_AGENTS_DIR) missing.push('ONESHOT_AGENTS_DIR');
 
-  if (!skipEnv) {
-    const genKey = randomBytes(24).toString('base64url');
-    apiKey = await ask(`  API key [${genKey}]: `, genKey);
-    const genPassword = randomBytes(16).toString('base64url');
-    dashboardPassword = await ask(`  Dashboard password [${genPassword}]: `, genPassword);
-    port = await ask('  Server port [3000]: ', '3000');
-    agentsDir = await ask('  Agents directory [./agents]: ', './agents');
-
-    writeFileSync(envPath, `API_KEY=${apiKey}\nDASHBOARD_PASSWORD=${dashboardPassword}\nPORT=${port}\nONESHOT_AGENTS_DIR=${agentsDir}\n`);
-    console.log('\n  .env written ✓');
+  if (missing.length === 0) {
+    console.log('  .env already configured ✓');
   } else {
-    console.log('  Keeping existing .env ✓');
-    const existing = readFileSync(envPath, 'utf8');
-    const match = existing.match(/^ONESHOT_AGENTS_DIR=(.+)$/m);
-    agentsDir = match ? match[1].trim() : './agents';
+    if (Object.keys(existing).length > 0) {
+      console.log(`  .env exists but missing: ${missing.join(', ')}\n`);
+    }
+
+    if (!existing.API_KEY) {
+      const genKey = randomBytes(24).toString('base64url');
+      existing.API_KEY = await ask(`  API key [${genKey}]: `, genKey);
+    }
+    if (!existing.DASHBOARD_PASSWORD) {
+      const genPassword = randomBytes(16).toString('base64url');
+      existing.DASHBOARD_PASSWORD = await ask(`  Dashboard password [${genPassword}]: `, genPassword);
+    }
+    if (!existing.PORT) {
+      existing.PORT = await ask('  Server port [3000]: ', '3000');
+    }
+    if (!existing.ONESHOT_AGENTS_DIR) {
+      existing.ONESHOT_AGENTS_DIR = await ask('  Agents directory [./agents]: ', './agents');
+    }
+
+    writeFileSync(envPath, `API_KEY=${existing.API_KEY}\nDASHBOARD_PASSWORD=${existing.DASHBOARD_PASSWORD}\nPORT=${existing.PORT}\nONESHOT_AGENTS_DIR=${existing.ONESHOT_AGENTS_DIR}\n`);
+    console.log('\n  .env written ✓');
   }
+
+  const agentsDir = existing.ONESHOT_AGENTS_DIR || './agents';
 
   // 3. Create agents directory
   const resolvedAgentsDir = path.resolve(ROOT, agentsDir);
