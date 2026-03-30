@@ -6,10 +6,10 @@ module.exports = {
   renderTemplate: require('./render-template'),
   buildCommand: require('./build-command'),
   prepareAgent: require('./prepare-agent'),
-  JobManager: require('./job-manager'),
+  RunManager: require('./run-manager'),
   resolveAgentsDir: require('./resolve-agents-dir'),
   resolveWorkspaceDir: require('./resolve-workspace-dir'),
   resolveLogsDir: require('./resolve-logs-dir'),
   resolveCwd: require('./resolve-cwd'),
-  createJobLogger: require('./job-logger'),
+  createRunLogger: require('./run-logger'),
 };

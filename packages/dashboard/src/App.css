@@ -743,16 +743,16 @@ body::after {
   color: #059669;
 }
 
-/* ---- Job detail ---- */
-.job-detail {
+/* ---- Run detail ---- */
+.run-detail {
   position: relative;
 }
 
-.job-detail .btn {
+.run-detail .btn {
   margin-bottom: 20px;
 }
 
-.job-info {
+.run-info {
   background: var(--surface);
   backdrop-filter: var(--blur);
   border: 1px solid var(--border);
@@ -761,21 +761,21 @@ body::after {
   margin-bottom: 20px;
 }
 
-.job-info h2 {
+.run-info h2 {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 12px;
 }
 
-.job-meta {
+.run-meta {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 8px;
   font-size: 14px;
 }
 
-.job-meta strong {
+.run-meta strong {
   color: var(--text-muted);
 }
 

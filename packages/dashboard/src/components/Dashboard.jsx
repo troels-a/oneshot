@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchJobs, fetchSchedules, stopJob } from '../api';
+import { fetchAgents, fetchRuns, fetchSchedules, stopRun } from '../api';
 
 const REFRESH_INTERVAL = 5000;
 
@@ -24,9 +24,9 @@ function statusBadge(status) {
   return <span className={`badge ${cls}`}>{status}</span>;
 }
 
-export default function Dashboard({ tab, onSelectJob }) {
+export default function Dashboard({ tab, onSelectRun }) {
   const [agents, setAgents] = useState([]);
-  const [jobs, setJobs] = useState([]);
+  const [runs, setRuns] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [agentFilter, setAgentFilter] = useState('');
@@ -34,12 +34,12 @@ export default function Dashboard({ tab, onSelectJob }) {
 
   const loadData = useCallback(async () => {
     try {
-      const [agentList, jobList] = await Promise.all([
+      const [agentList, runList] = await Promise.all([
         fetchAgents(),
-        fetchJobs({ status: statusFilter || undefined, agent: agentFilter || undefined }),
+        fetchRuns({ status: statusFilter || undefined, agent: agentFilter || undefined }),
       ]);
       setAgents(agentList);
-      setJobs(jobList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
+      setRuns(runList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
 
       if (tab === 'schedules') {
         const results = await Promise.all(
@@ -68,11 +68,11 @@ export default function Dashboard({ tab, onSelectJob }) {
 
   return (
     <div>
-      {tab === 'jobs' && (
+      {tab === 'runs' && (
         <div className="glass-card">
           <div className="section-header" style={{ marginBottom: 16 }}>
-            <span className="section-title">Jobs</span>
-            <span className="section-badge">{jobs.length} total</span>
+            <span className="section-title">Runs</span>
+            <span className="section-badge">{runs.length} total</span>
           </div>
           <div className="filters">
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -89,8 +89,8 @@ export default function Dashboard({ tab, onSelectJob }) {
               ))}
             </select>
           </div>
-          {jobs.length === 0 ? (
-            <p className="empty">No jobs found</p>
+          {runs.length === 0 ? (
+            <p className="empty">No runs found</p>
           ) : (
             <table className="glass-table">
               <thead>
@@ -103,19 +103,19 @@ export default function Dashboard({ tab, onSelectJob }) {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id} className="clickable" onClick={() => onSelectJob(job.id)}>
-                    <td style={{ fontWeight: 500 }}>{job.agentName}</td>
-                    <td>{statusBadge(job.status)}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(job.startedAt)}</td>
-                    <td className="mono">{job.id.slice(0, 8)}</td>
+                {runs.map((run) => (
+                  <tr key={run.id} className="clickable" onClick={() => onSelectRun(run.id)}>
+                    <td style={{ fontWeight: 500 }}>{run.agentName}</td>
+                    <td>{statusBadge(run.status)}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(run.startedAt)}</td>
+                    <td className="mono">{run.id.slice(0, 8)}</td>
                     <td>
-                      {job.status === 'running' && (
+                      {run.status === 'running' && (
                         <button
                           className="btn-kill"
                           onClick={(e) => {
                             e.stopPropagation();
-                            stopJob(job.id).then(loadData).catch(console.error);
+                            stopRun(run.id).then(loadData).catch(console.error);
                           }}
                         >
                           Kill
@@ -137,8 +137,8 @@ export default function Dashboard({ tab, onSelectJob }) {
           ) : (
             <div className="agent-grid">
               {agents.map((agent) => {
-                const agentJobs = jobs.filter((j) => j.agentName === agent.name);
-                const running = agentJobs.filter((j) => j.status === 'running').length;
+                const agentRuns = runs.filter((r) => r.agentName === agent.name);
+                const running = agentRuns.filter((r) => r.status === 'running').length;
                 return (
                   <div key={agent.name} className="agent-card">
                     <div className="agent-card-header">
@@ -146,7 +146,7 @@ export default function Dashboard({ tab, onSelectJob }) {
                       <span className={`badge badge-type-${agent.entrypoint}`}>{agent.entrypoint}</span>
                     </div>
                     <div className="agent-stats">
-                      <span>{agentJobs.length} jobs</span>
+                      <span>{agentRuns.length} runs</span>
                       {running > 0 && <span className="badge badge-running">{running} running</span>}
                     </div>
                   </div>

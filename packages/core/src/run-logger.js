@@ -2,7 +2,7 @@ const { randomUUID } = require('crypto');
 const path = require('path');
 const { mkdirSync, createWriteStream } = require('fs');
 
-function createJobLogger(logsDir) {
+function createRunLogger(logsDir) {
   const id = randomUUID();
   const logDir = path.join(logsDir, id);
   mkdirSync(logDir, { recursive: true });
@@ -13,4 +13,4 @@ function createJobLogger(logsDir) {
   return { id, logDir, stdoutStream, stderrStream };
 }
 
-module.exports = createJobLogger;
+module.exports = createRunLogger;

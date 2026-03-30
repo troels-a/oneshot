@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchJobs } from '../api';
+import { fetchRuns } from '../api';
 
 const REFRESH_INTERVAL = 5000;
 
@@ -14,10 +14,10 @@ function timeAgo(iso) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-function formatLatency(job) {
-  if (!job.startedAt) return '-';
-  const end = job.completedAt ? new Date(job.completedAt) : new Date();
-  const secs = ((end - new Date(job.startedAt)) / 1000).toFixed(1);
+function formatLatency(run) {
+  if (!run.startedAt) return '-';
+  const end = run.completedAt ? new Date(run.completedAt) : new Date();
+  const secs = ((end - new Date(run.startedAt)) / 1000).toFixed(1);
   return `${secs}s`;
 }
 
@@ -32,14 +32,14 @@ function statusLabel(status) {
   return <span className={`badge ${cls}`}>{label}</span>;
 }
 
-export default function Overview({ onSelectJob }) {
-  const [jobs, setJobs] = useState([]);
+export default function Overview({ onSelectRun }) {
+  const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
-      const jobList = await fetchJobs({});
-      setJobs(jobList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
+      const runList = await fetchRuns({});
+      setRuns(runList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
     } catch (err) {
       console.error('Failed to load overview data:', err);
     } finally {
@@ -55,20 +55,20 @@ export default function Overview({ onSelectJob }) {
 
   if (loading) return <div className="loading">Loading...</div>;
 
-  const recentJobs = jobs.slice(0, 50);
+  const recentRuns = runs.slice(0, 50);
 
   return (
     <div className="glass-card">
       <div className="section-header">
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <span className="section-title-dot" />
-          <span className="section-title">Live Jobs Stream</span>
+          <span className="section-title">Live Runs Stream</span>
         </div>
-        <span className="section-badge">Last {recentJobs.length || 50}</span>
+        <span className="section-badge">Last {recentRuns.length || 50}</span>
       </div>
 
-      {recentJobs.length === 0 ? (
-        <p className="empty">No jobs yet</p>
+      {recentRuns.length === 0 ? (
+        <p className="empty">No runs yet</p>
       ) : (
         <table className="glass-table">
           <thead>
@@ -80,16 +80,16 @@ export default function Overview({ onSelectJob }) {
             </tr>
           </thead>
           <tbody>
-            {recentJobs.map((job) => (
+            {recentRuns.map((run) => (
               <tr
-                key={job.id}
+                key={run.id}
                 className="clickable"
-                onClick={() => onSelectJob(job.id)}
+                onClick={() => onSelectRun(run.id)}
               >
-                <td style={{ fontWeight: 500 }}>{job.agentName}</td>
-                <td style={{ color: 'var(--text-muted)' }}>{timeAgo(job.startedAt)}</td>
-                <td style={{ color: 'var(--text-muted)' }}>{formatLatency(job)}</td>
-                <td style={{ textAlign: 'right' }}>{statusLabel(job.status)}</td>
+                <td style={{ fontWeight: 500 }}>{run.agentName}</td>
+                <td style={{ color: 'var(--text-muted)' }}>{timeAgo(run.startedAt)}</td>
+                <td style={{ color: 'var(--text-muted)' }}>{formatLatency(run)}</td>
+                <td style={{ textAlign: 'right' }}>{statusLabel(run.status)}</td>
               </tr>
             ))}
           </tbody>

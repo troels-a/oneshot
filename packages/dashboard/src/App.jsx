@@ -3,15 +3,15 @@ import { getApiKey, setApiKey, clearApiKey, login } from './api';
 import Login from './components/Login';
 import Overview from './components/Overview';
 import Dashboard from './components/Dashboard';
-import JobDetail from './components/JobDetail';
+import RunDetail from './components/RunDetail';
 import './App.css';
 
-const VIEWS = ['dashboard', 'agents', 'jobs', 'schedules', 'logs'];
+const VIEWS = ['dashboard', 'agents', 'runs', 'schedules'];
 
 export default function App() {
   const [authed, setAuthed] = useState(!!getApiKey());
   const [view, setView] = useState('dashboard');
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
 
   async function handleLogin(password) {
     try {
@@ -27,15 +27,15 @@ export default function App() {
   function handleLogout() {
     clearApiKey();
     setAuthed(false);
-    setSelectedJob(null);
+    setSelectedRun(null);
   }
 
-  function handleSelectJob(jobId) {
-    setSelectedJob(jobId);
+  function handleSelectRun(runId) {
+    setSelectedRun(runId);
   }
 
   function handleBack() {
-    setSelectedJob(null);
+    setSelectedRun(null);
   }
 
   if (!authed) {
@@ -57,8 +57,8 @@ export default function App() {
           {VIEWS.map((v) => (
             <button
               key={v}
-              className={`nav-pill ${view === v && !selectedJob ? 'nav-pill-active' : ''}`}
-              onClick={() => { setView(v); setSelectedJob(null); }}
+              className={`nav-pill ${view === v && !selectedRun ? 'nav-pill-active' : ''}`}
+              onClick={() => { setView(v); setSelectedRun(null); }}
             >
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
@@ -69,17 +69,17 @@ export default function App() {
 
       <div className="welcome-section">
         <div className="welcome-text">
-          <h1>{selectedJob ? 'Job Detail' : 'Welcome'}</h1>
-          <p>Your agent control room — monitoring jobs, costs, and performance</p>
+          <h1>{selectedRun ? 'Run Detail' : 'Welcome'}</h1>
+          <p>Your agent control room — monitoring runs, costs, and performance</p>
         </div>
       </div>
 
-      {selectedJob ? (
-        <JobDetail jobId={selectedJob} onBack={handleBack} />
+      {selectedRun ? (
+        <RunDetail runId={selectedRun} onBack={handleBack} />
       ) : view === 'dashboard' ? (
-        <Overview onSelectJob={handleSelectJob} />
+        <Overview onSelectRun={handleSelectRun} />
       ) : (
-        <Dashboard tab={view} onSelectJob={handleSelectJob} />
+        <Dashboard tab={view} onSelectRun={handleSelectRun} />
       )}
     </div>
   );

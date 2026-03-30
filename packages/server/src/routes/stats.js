@@ -2,16 +2,16 @@ const { Router } = require('express');
 const router = Router();
 
 router.get('/stats', (req, res) => {
-  const jobs = req.jobManager.listJobs({});
-  const activeJobs = jobs.filter((j) => j.status === 'running').length;
-  const completedJobs = jobs.filter((j) => j.status === 'completed').length;
-  const failedJobs = jobs.filter((j) => j.status === 'failed').length;
-  const pendingJobs = jobs.filter((j) => j.status === 'pending').length;
-  const totalJobs = jobs.length;
-  const finished = completedJobs + failedJobs;
-  const successRate = finished > 0 ? Math.round((completedJobs / finished) * 1000) / 10 : 0;
+  const runs = req.runManager.listRuns({});
+  const active = runs.filter((r) => r.status === 'running').length;
+  const completed = runs.filter((r) => r.status === 'completed').length;
+  const failed = runs.filter((r) => r.status === 'failed').length;
+  const pending = runs.filter((r) => r.status === 'pending').length;
+  const total = runs.length;
+  const finished = completed + failed;
+  const successRate = finished > 0 ? Math.round((completed / finished) * 1000) / 10 : 0;
 
-  res.json({ activeJobs, totalJobs, completedJobs, failedJobs, pendingJobs, successRate });
+  res.json({ active, total, completed, failed, pending, successRate });
 });
 
 module.exports = router;

@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchJob, fetchJobLogs, fetchLogContent } from '../api';
+import { fetchRun, fetchRunLogs, fetchLogContent } from '../api';
 
 const PAGE_SIZE = 50;
 
-export default function JobDetail({ jobId, onBack }) {
-  const [job, setJob] = useState(null);
+export default function RunDetail({ runId, onBack }) {
+  const [run, setRun] = useState(null);
   const [logFiles, setLogFiles] = useState([]);
   const [entries, setEntries] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
@@ -15,7 +15,7 @@ export default function JobDetail({ jobId, onBack }) {
   const timelineRef = useRef(null);
 
   async function loadPage(filename, offset, append = false) {
-    const data = await fetchLogContent(jobId, filename, { offset, limit: PAGE_SIZE });
+    const data = await fetchLogContent(runId, filename, { offset, limit: PAGE_SIZE });
     const parsed = parseLines(data.lines);
     if (append) {
       setEntries(prev => [...prev, ...parsed]);
@@ -31,12 +31,12 @@ export default function JobDetail({ jobId, onBack }) {
 
     async function load() {
       try {
-        const [jobData, logsData] = await Promise.all([
-          fetchJob(jobId),
-          fetchJobLogs(jobId).catch(() => ({ files: [] })),
+        const [runData, logsData] = await Promise.all([
+          fetchRun(runId),
+          fetchRunLogs(runId).catch(() => ({ files: [] })),
         ]);
         if (cancelled) return;
-        setJob(jobData);
+        setRun(runData);
         setLogFiles(logsData.files || []);
 
         if (logsData.files?.length && !selectedLog) {
@@ -53,12 +53,12 @@ export default function JobDetail({ jobId, onBack }) {
     load();
     const interval = setInterval(async () => {
       try {
-        const jobData = await fetchJob(jobId);
-        if (!cancelled) setJob(jobData);
+        const runData = await fetchRun(runId);
+        if (!cancelled) setRun(runData);
       } catch {}
     }, 5000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [jobId]);
+  }, [runId]);
 
   async function selectLog(filename) {
     setSelectedLog(filename);
@@ -82,26 +82,26 @@ export default function JobDetail({ jobId, onBack }) {
       } catch {}
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, selectedLog, jobId]);
+  }, [loadingMore, hasMore, selectedLog, runId]);
 
   if (error) return <div className="error-box">{error}</div>;
-  if (!job) return <div className="loading">Loading...</div>;
+  if (!run) return <div className="loading">Loading...</div>;
 
   return (
-    <div className="job-detail">
+    <div className="run-detail">
       <button className="btn btn-glass btn-sm" onClick={onBack}>Back</button>
 
-      <div className="job-info">
-        <h2>{job.agentName}</h2>
-        <div className="job-meta">
-          <div><strong>ID:</strong> <span className="mono">{job.id}</span></div>
-          <div><strong>Status:</strong> <span className={`badge badge-${job.status}`}>{job.status}</span></div>
-          <div><strong>Entrypoint:</strong> {job.entrypoint || '-'}</div>
-          <div><strong>PID:</strong> {job.pid || '-'}</div>
-          <div><strong>Started:</strong> {job.startedAt ? new Date(job.startedAt).toLocaleString() : '-'}</div>
-          <div><strong>Completed:</strong> {job.completedAt ? new Date(job.completedAt).toLocaleString() : '-'}</div>
-          <div><strong>Exit Code:</strong> {job.exitCode ?? '-'}</div>
-          {job.signal && <div><strong>Signal:</strong> {job.signal}</div>}
+      <div className="run-info">
+        <h2>{run.agentName}</h2>
+        <div className="run-meta">
+          <div><strong>ID:</strong> <span className="mono">{run.id}</span></div>
+          <div><strong>Status:</strong> <span className={`badge badge-${run.status}`}>{run.status}</span></div>
+          <div><strong>Entrypoint:</strong> {run.entrypoint || '-'}</div>
+          <div><strong>PID:</strong> {run.pid || '-'}</div>
+          <div><strong>Started:</strong> {run.startedAt ? new Date(run.startedAt).toLocaleString() : '-'}</div>
+          <div><strong>Completed:</strong> {run.completedAt ? new Date(run.completedAt).toLocaleString() : '-'}</div>
+          <div><strong>Exit Code:</strong> {run.exitCode ?? '-'}</div>
+          {run.signal && <div><strong>Signal:</strong> {run.signal}</div>}
         </div>
       </div>
 

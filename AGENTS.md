@@ -4,14 +4,14 @@ This document tells coding agents (Claude, Copilot, etc.) how to create and modi
 
 ## Project Overview
 
-Oneshot is a job scheduling and execution platform for autonomous agents. Agents are CLI programs (Claude prompts, Node.js scripts, or Bash scripts) that can be run on-demand or on a cron schedule via a REST API and web dashboard.
+Oneshot is a run scheduling and execution platform for autonomous agents. Agents are CLI programs (Claude prompts, Node.js scripts, or Bash scripts) that can be run on-demand or on a cron schedule via a REST API and web dashboard.
 
 ## Monorepo Structure
 
 - `packages/core` — Agent discovery, parsing, validation, execution (shared library)
 - `packages/cli` — CLI tool (`oneshot list|info|run`)
-- `packages/server` — Express REST API with job management and cron scheduling
-- `packages/dashboard` — React web UI for monitoring jobs and schedules
+- `packages/server` — Express REST API with run management and cron scheduling
+- `packages/dashboard` — React web UI for monitoring runs and schedules
 
 ## Creating an Agent
 

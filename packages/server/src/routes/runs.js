@@ -4,45 +4,46 @@ const { createInterface } = require('readline');
 const path = require('path');
 const router = Router();
 
-router.get('/jobs', (req, res) => {
-  const jobs = req.jobManager.listJobs({
+router.get('/runs', (req, res) => {
+  const runs = req.runManager.listRuns({
     status: req.query.status,
     agent: req.query.agent,
   });
-  res.json(jobs);
+  res.json(runs);
 });
 
-router.get('/jobs/:id', (req, res) => {
-  const job = req.jobManager.getJob(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
-  res.json(job);
+router.get('/runs/:id', (req, res) => {
+  const run = req.runManager.getRun(req.params.id);
+  if (!run) return res.status(404).json({ error: 'Run not found' });
+  res.json(run);
 });
 
-router.get('/jobs/:id/logs', (req, res) => {
-  const job = req.jobManager.getJob(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
+router.get('/runs/:id/logs', (req, res) => {
+  const run = req.runManager.getRun(req.params.id);
+  if (!run) return res.status(404).json({ error: 'Run not found' });
 
-  if (!existsSync(job.logDir)) {
+  if (!existsSync(run.logDir)) {
     return res.status(404).json({ error: 'No logs found' });
   }
 
-  const entries = readdirSync(job.logDir);
+  const entries = readdirSync(run.logDir);
   const files = [];
   for (const name of entries) {
-    const stat = statSync(path.join(job.logDir, name));
+    if (name === 'run.json' || name === 'job.json') continue;
+    const stat = statSync(path.join(run.logDir, name));
     if (!stat.isFile()) continue;
     files.push({ name, size: stat.size, modifiedAt: stat.mtime.toISOString() });
   }
 
-  res.json({ jobId: job.id, files });
+  res.json({ runId: run.id, files });
 });
 
-router.get('/jobs/:id/logs/:filename', async (req, res) => {
-  const job = req.jobManager.getJob(req.params.id);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
+router.get('/runs/:id/logs/:filename', async (req, res) => {
+  const run = req.runManager.getRun(req.params.id);
+  if (!run) return res.status(404).json({ error: 'Run not found' });
 
   const filename = path.basename(req.params.filename);
-  const filePath = path.join(job.logDir, filename);
+  const filePath = path.join(run.logDir, filename);
 
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
     return res.status(404).json({ error: 'Log file not found' });
@@ -70,10 +71,10 @@ router.get('/jobs/:id/logs/:filename', async (req, res) => {
   res.json({ lines, offset, limit, hasMore });
 });
 
-router.post('/jobs/:id/stop', (req, res) => {
-  const result = req.jobManager.stopJob(req.params.id);
-  if (result.error === 'not_found') return res.status(404).json({ error: 'Job not found' });
-  if (result.error === 'not_running') return res.status(409).json({ error: 'Job is not running' });
+router.post('/runs/:id/stop', (req, res) => {
+  const result = req.runManager.stopRun(req.params.id);
+  if (result.error === 'not_found') return res.status(404).json({ error: 'Run not found' });
+  if (result.error === 'not_running') return res.status(409).json({ error: 'Run is not running' });
   res.json({ stopped: true, id: req.params.id });
 });
 
