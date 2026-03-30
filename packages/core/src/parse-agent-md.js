@@ -1,7 +1,7 @@
 const { readFileSync } = require('fs');
 const YAML = require('yaml');
 
-const VALID_ENTRYPOINTS = new Set(['claude', 'node', 'bash']);
+const VALID_RUNTIMES = new Set(['claude', 'node', 'bash']);
 
 function parseAgentMd(filePath) {
   const raw = readFileSync(filePath, 'utf8');
@@ -14,12 +14,13 @@ function parseAgentMd(filePath) {
   const frontmatter = YAML.parse(match[1]);
   const body = match[2];
 
-  if (!frontmatter || !frontmatter.entrypoint) {
-    throw new Error(`Invalid agent.md: missing entrypoint in ${filePath}`);
+  const runtime = frontmatter && (frontmatter.runtime || frontmatter.entrypoint);
+  if (!runtime) {
+    throw new Error(`Invalid agent.md: missing runtime in ${filePath}`);
   }
 
-  if (!VALID_ENTRYPOINTS.has(frontmatter.entrypoint)) {
-    throw new Error(`Invalid entrypoint "${frontmatter.entrypoint}" in ${filePath}. Must be one of: ${[...VALID_ENTRYPOINTS].join(', ')}`);
+  if (!VALID_RUNTIMES.has(runtime)) {
+    throw new Error(`Invalid runtime "${runtime}" in ${filePath}. Must be one of: ${[...VALID_RUNTIMES].join(', ')}`);
   }
 
   const args = Array.isArray(frontmatter.args) ? frontmatter.args.map(arg => {
@@ -30,7 +31,7 @@ function parseAgentMd(filePath) {
   const commands = Array.isArray(frontmatter.commands) ? frontmatter.commands : [];
 
   return {
-    entrypoint: frontmatter.entrypoint,
+    runtime,
     args,
     commands,
     body,

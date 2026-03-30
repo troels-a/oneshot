@@ -10,7 +10,7 @@ function prepareAgent(agentDir, providedArgs = {}, cwd) {
   const mergedArgs = validateArgs(config.args, providedArgs);
   const commandResults = runCommands(config.commands, cwd || agentDir, mergedArgs);
   const renderedPrompt = renderTemplate(config.body, mergedArgs, commandResults);
-  const command = buildCommand(config.entrypoint, agentDir, renderedPrompt, mergedArgs);
+  const command = buildCommand(config.runtime, agentDir, renderedPrompt, mergedArgs);
   return { config, mergedArgs, renderedPrompt, command };
 }
 
