@@ -97,7 +97,15 @@ async function main() {
     console.log('  Dependencies already installed ✓');
   }
 
-  // 6. Done
+  // 6. Link CLI globally
+  try {
+    execSync('npm link --workspace=packages/cli', { cwd: ROOT, stdio: 'ignore' });
+    console.log('  Linked `oneshot` CLI globally ✓');
+  } catch {
+    console.log('  Could not link `oneshot` CLI globally (try running setup with sudo)');
+  }
+
+  // 7. Done
   console.log(`
   ───────────────────────────────────────
   Setup complete! Next steps:
