@@ -3,14 +3,38 @@ import { getApiKey, setApiKey, clearApiKey, login } from './api';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import RunDetail from './components/RunDetail';
+import AgentEditor from './components/AgentEditor';
 import './App.css';
 
+function Logo() {
+  return (
+    <svg width="244" height="249" viewBox="0 0 244 249" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 28, height: 'auto', flexShrink: 0 }}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M173.218 246.716L164.817 243.644L163.158 242.323L162.492 240.888L160.178 237.125L158.846 234.257L155.731 224.547L154.727 214.596L155.027 212.801L156.709 212.107L162.089 210.742L165.962 213.824L168.524 223.095L170.747 229.384L173.513 231.586L174.507 231.473L179.485 235.437L180.162 241.399L177.079 245.271L174.098 245.61L173.218 246.716ZM160.553 214.942L160.937 213.892L159.447 214.061L159.063 215.111L160.553 214.942ZM163.647 215.597L164.087 215.044L162.428 213.722L161.106 215.382L161.66 215.822L163.647 215.597Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M10.363 217.454L7.23 217.023L3.146 214.225L3.027 208.144L4.226 206.394L13.56 199.181L22.815 194.272L28.506 192.064L31.478 191.635L34.634 192.19L36.177 192.283L39.094 194.281L39.262 196.539L37.879 197.306L37.615 202.696L36.416 204.446L35.141 204.43L34.374 203.047L32.677 203.492L22.416 208.467L17.891 211.469L16.109 212.82L14.726 213.587L13.128 215.92L11.162 216.288L10.363 217.454ZM31.814 196.151L32.121 195.076L30.647 195.351L30.339 196.426L31.814 196.151ZM34.946 196.582L35.254 195.507L33.779 195.783L33.472 196.858L34.946 196.582ZM36.356 201.405L36.081 199.931L35.006 199.623L35.19 200.606L36.356 201.405Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M187.655 190.5L181.155 190.25L179.655 188.75L178.655 182.75L183.655 177.75L185.155 175.25L194.655 161.75L200.03 151.25L202.905 144.5L204.155 144.25L205.655 142.75L206.155 141.25V139.25L205.905 137.25L207.905 129.375L214.155 129.25L217.655 132.75L218.655 145.75L219.655 146.75L218.655 147.75L219.655 148.75L219.03 151.25L215.155 160.25L209.655 171.75L205.155 176.25L201.155 178.25L199.655 179.75V180.75L191.155 189.25L187.655 190.5ZM182.655 181.25V180.25H181.655V181.25H182.655Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M57.342 212.341L56.961 207.45L58.304 206.136L64.157 204.618L69.6 207.714L72.224 208.515L86.532 213.883L97.465 216.554L104.438 217.836L104.807 218.739L106.439 219.668L107.975 219.849L109.959 219.592L111.918 219.148L119.921 219.633L120.65 224.289L117.518 227.355L104.722 229.771L103.827 230.647L102.739 230.028L101.844 230.904L99.304 230.758L90.004 229.016L78.066 226.381L73.168 223.595L70.797 220.861L69.165 219.932L68.173 220.061L58.921 214.797L57.342 212.341ZM66.032 207.416L67.024 207.288L66.927 206.54L65.935 206.668L66.032 207.416Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M197.655 109.75L194.655 109.625L190.905 108L190.655 105.75L191.155 105.25L192.155 106.25L193.155 105.25H194.655L194.155 104.25L191.78 104L191.655 99.75L194.155 97.25H195.155L196.155 98.25L198.155 96.25L199.655 95.75L206.655 92.75L219.655 85.875L234.655 79.875L239.155 79.25L241.155 81.25L242.405 81.5L243.28 84.25V86.25L242.655 88.75L241.155 90.25L239.655 90.75L221.655 98.75L214.655 102.75L207.655 105.75L201.655 108.625L197.655 109.75ZM194.655 102.25V99.75L193.655 99.25V101.75L194.655 102.25ZM200.655 105.25V104.25H199.655V105.25H200.655ZM197.155 106.25L197.655 105.25H195.155L194.655 106.25H197.155Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M123.655 181.375H102.655L100.155 180.25L97.655 178.75L92.655 176.75L90.155 176.25L88.155 174.25H87.155L84.655 171.75L78.28 159.25L77.155 155.25L75.155 150.25L73.28 146.25L72.155 142.25V138.25L73.28 134.25L79.155 121.25L81.655 116.75L85.155 113.25L87.155 112.25L95.155 107.25L99.155 104.25L102.655 101.875L116.655 96.75L120.155 96.25L121.155 95.25L122.155 96.25L125.655 96.875L132.655 99.75L136.655 101.75L138.155 102.25L140.655 104.75V105.75L139.655 106.75L141.655 108.75L141.905 110L148.655 109.875L153.405 112.5L153.655 113.75L155.655 115.75L156.405 122.25L159.155 127.25L159.78 129.25V144.25L159.155 146.25L154.03 158.25L152.155 161.25L149.155 165.25L147.655 167.75L141.155 174.25L139.655 174.75L132.655 177.75L125.655 180.875L123.655 181.375ZM110.655 164L120.655 162.5L123.655 161.625L129.655 158.75L131.155 158.25L132.655 156.75L134.655 152.75L137.655 149.75L138.28 147.25L142.03 139.25V135.25L139.155 129.25L138.405 127.25L137.655 122.75L136.155 121.25L133.655 120.625L127.655 117.75L122.655 115.75H118.655L112.655 117.875L106.155 122.25L98.655 126.75L97.155 127.25L95.655 128.75L95.03 131.25L91.155 139.25V141.25L94.03 147.25L95.155 151.25L97.155 156.25L97.655 157.75L100.155 160.25L102.655 160.875L108.655 163.75L110.655 164Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M23.655 155.625L19.155 155.25L10.655 146.75L8.28 133.25V126.25L11.405 112.25L12.155 110.25L21.03 93.25L22.28 90.25L24.655 85.75L26.155 84.25H27.155L32.655 78.75V77.75L36.155 74.25L39.155 72.25L43.155 69.25L45.155 68.25L46.155 67.25L48.155 69.25L49.155 68.25L57.155 69.25L58.655 70.75L57.655 76.75L53.155 81.25H52.155L46.655 86.75L45.655 90.75L39.655 96.75L39.155 98.25L35.28 106.25L34.655 108.75L32.655 110.75L32.155 112.25L29.405 117.25L27.155 128.25V132.25L28.155 136.25L28.28 139.25L27.655 143.75L26.655 144.75L27.655 145.75L28.155 148.25L28.03 151.25L27.655 152.75L25.155 155.25L23.655 155.625Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M179.155 64.25L168.655 63.5L164.655 62.625L158.655 59.875L146.655 59.5L144.655 58.75L140.655 56.75L138.655 56L134.155 55.25L130.655 51.75V46.75L133.655 43.75L132.655 42.75V41.75L134.155 40.25L138.155 39.25L140.155 37.25L143.655 37.875L151.655 41.5L161.655 43L171.155 48.25L173.155 50.25L175.655 50.875L181.405 53.5L182.155 56.25L182.03 60.25L181.655 61.75L179.155 64.25Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M104.655 63.75L103.155 65.25L95.905 65.125L95.03 62.25L90.28 50.25L89.655 47.75L87.655 45.75L87.155 44.25L83.655 38.75L82.655 36.75L73.155 27.25L63.155 19.25L60.655 16.75L58.655 12.75L56.655 10.75L55.655 4.75L57.655 2.75V1.75L59.155 0.25L60.655 0H65.655L67.155 0.25L68.655 1.75L69.655 4.75L77.155 12.25H78.155L94.655 28.75L95.155 30.25L106.155 56.25L106.655 58.75L104.655 60.75L105.655 61.75L104.655 62.75V63.75ZM102.655 58.25V57.25H101.655V58.25H102.655Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 const VIEWS = ['runs', 'agents', 'schedules'];
+
+const VIEW_HELP = {
+  runs: 'View and manage all agent runs — filter by status or agent, kill active runs, and inspect logs.',
+  agents: 'Browse registered agents, see their runtime type, and check recent run activity.',
+  schedules: 'Manage cron-based schedules for each agent — view timing, toggle enabled state, and check results.',
+};
 
 export default function App() {
   const [authed, setAuthed] = useState(!!getApiKey());
   const [view, setView] = useState('runs');
   const [selectedRun, setSelectedRun] = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState(null);
 
   async function handleLogin(password) {
     try {
@@ -27,6 +51,7 @@ export default function App() {
     clearApiKey();
     setAuthed(false);
     setSelectedRun(null);
+    setSelectedAgent(null);
   }
 
   function handleSelectRun(runId) {
@@ -37,8 +62,37 @@ export default function App() {
     setSelectedRun(null);
   }
 
+  function handleSelectAgent(name) {
+    setSelectedAgent(name);
+  }
+
+  function handleAgentBack() {
+    setSelectedAgent(null);
+  }
+
   if (!authed) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  if (selectedAgent !== null) {
+    return (
+      <div className="app">
+        <div className="bg-blob-1" />
+        <div className="bg-blob-2" />
+
+        <nav className="app-nav">
+          <div className="app-logo">
+            <Logo />
+            <span className="app-logo-text">oneshot</span>
+          </div>
+        </nav>
+
+        <AgentEditor
+          agentName={selectedAgent === '__new__' ? null : selectedAgent}
+          onBack={handleAgentBack}
+        />
+      </div>
+    );
   }
 
   return (
@@ -48,33 +102,38 @@ export default function App() {
 
       <nav className="app-nav">
         <div className="app-logo">
-          <div className="app-logo-icon">O</div>
+          <Logo />
           <span className="app-logo-text">oneshot</span>
         </div>
       </nav>
 
       <div className="welcome-section">
         <div className="welcome-text">
-          <h1>{selectedRun ? 'Run Detail' : 'Welcome'}</h1>
-          <p>Your agent control room — monitoring runs, costs, and performance</p>
+          {selectedRun ? (
+            <p>Viewing run details and logs</p>
+          ) : (
+            <p>{VIEW_HELP[view]}</p>
+          )}
         </div>
-        <div className="app-nav-pills">
-          {VIEWS.map((v) => (
-            <button
-              key={v}
-              className={`nav-pill ${view === v && !selectedRun ? 'nav-pill-active' : ''}`}
-              onClick={() => { setView(v); setSelectedRun(null); }}
-            >
-              {v.charAt(0).toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
+        {!selectedRun && (
+          <div className="app-nav-pills">
+            {VIEWS.map((v) => (
+              <button
+                key={v}
+                className={`nav-pill ${view === v ? 'nav-pill-active' : ''}`}
+                onClick={() => { setView(v); setSelectedRun(null); }}
+              >
+                {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {selectedRun ? (
         <RunDetail runId={selectedRun} onBack={handleBack} />
       ) : (
-        <Dashboard tab={view} onSelectRun={handleSelectRun} />
+        <Dashboard tab={view} onSelectRun={handleSelectRun} onSelectAgent={handleSelectAgent} />
       )}
     </div>
   );

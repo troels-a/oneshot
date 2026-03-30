@@ -11,6 +11,7 @@ const agentsRouter = require('./routes/agents');
 const runsRouter = require('./routes/runs');
 const schedulesRouter = require('./routes/schedules');
 const statsRouter = require('./routes/stats');
+const filesRouter = require('./routes/files');
 const createAuthRouter = require('./routes/auth');
 
 const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
@@ -50,6 +51,7 @@ function createApp(options = {}) {
   app.use(schedulesRouter);
   app.use(runsRouter);
   app.use(statsRouter);
+  app.use(filesRouter);
 
   // Error handler
   app.use((err, req, res, next) => {

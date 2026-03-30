@@ -1,6 +1,8 @@
 module.exports = {
   discoverAgents: require('./discover'),
   parseAgentMd: require('./parse-agent-md'),
+  serializeAgentMd: require('./serialize-agent-md'),
+  extractResult: require('./extract-result'),
   validateArgs: require('./validate-args'),
   runCommands: require('./run-commands'),
   renderTemplate: require('./render-template'),

@@ -83,6 +83,75 @@ export async function fetchStats() {
   return res.json();
 }
 
+// Agent CRUD
+export async function fetchAgent(name) {
+  const res = await request(`/agents/${name}`);
+  return res.json();
+}
+
+export async function createAgent(data) {
+  const res = await request('/agents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function updateAgent(name, data) {
+  const res = await request(`/agents/${name}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteAgent(name) {
+  await request(`/agents/${name}`, { method: 'DELETE' });
+}
+
+// File management
+export async function fetchAgentFiles(name) {
+  const res = await request(`/agents/${name}/files`);
+  return res.json();
+}
+
+export async function fetchAgentFile(agent, filename) {
+  const res = await request(`/agents/${agent}/files/${filename}`);
+  return res.json();
+}
+
+export async function updateAgentFile(agent, filename, content) {
+  const res = await request(`/agents/${agent}/files/${filename}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  return res.json();
+}
+
+export async function createAgentFile(agent, name, content) {
+  const res = await request(`/agents/${agent}/files`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, content }),
+  });
+  return res.json();
+}
+
+export async function uploadAgentFile(agent, formData) {
+  const res = await request(`/agents/${agent}/files/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  return res.json();
+}
+
+export async function deleteAgentFile(agent, filename) {
+  await request(`/agents/${agent}/files/${filename}`, { method: 'DELETE' });
+}
+
 export async function login(password) {
   const res = await fetch(`${BASE}/auth/login`, {
     method: 'POST',

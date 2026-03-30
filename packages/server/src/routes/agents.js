@@ -1,9 +1,13 @@
 const { Router } = require('express');
-const { discoverAgents } = require('@oneshot/core');
+const path = require('path');
+const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
+const { discoverAgents, parseAgentMd, serializeAgentMd } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody } = require('../lib/validate-dispatch-options');
 
 const RESERVED_KEYS = new Set(['args', 'path', 'timeout']);
+const VALID_NAME = /^[a-zA-Z0-9_-]+$/;
+const VALID_RUNTIMES = new Set(['claude', 'node', 'bash']);
 
 function normalizeBody(body) {
   if (body.args || Object.keys(body).every(k => RESERVED_KEYS.has(k))) {
@@ -55,6 +59,76 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
     }
     next(err);
   }
+});
+
+router.get('/agents/:agent', validateParams, (req, res) => {
+  const { agent } = req.params;
+  const agentMdPath = path.join(req.agentsDir, agent, 'agent.md');
+
+  if (!existsSync(agentMdPath)) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
+
+  const config = parseAgentMd(agentMdPath);
+  res.json({
+    name: agent,
+    runtime: config.runtime,
+    args: config.args,
+    commands: config.commands,
+    body: config.body,
+  });
+});
+
+router.post('/agents', (req, res) => {
+  const { name, runtime, args, commands, body } = req.body;
+
+  if (!name || !VALID_NAME.test(name)) {
+    return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
+  }
+  if (!runtime || !VALID_RUNTIMES.has(runtime)) {
+    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
+  }
+
+  const agentDir = path.join(req.agentsDir, name);
+  if (existsSync(agentDir)) {
+    return res.status(409).json({ error: 'Agent already exists' });
+  }
+
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '' });
+  mkdirSync(agentDir, { recursive: true });
+  writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
+
+  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '' });
+});
+
+router.put('/agents/:agent', validateParams, (req, res) => {
+  const { agent } = req.params;
+  const agentDir = path.join(req.agentsDir, agent);
+
+  if (!existsSync(agentDir)) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
+
+  const { runtime, args, commands, body } = req.body;
+  if (!runtime || !VALID_RUNTIMES.has(runtime)) {
+    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
+  }
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '' });
+  writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
+
+  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '' });
+});
+
+router.delete('/agents/:agent', validateParams, (req, res) => {
+  const { agent } = req.params;
+  const agentDir = path.join(req.agentsDir, agent);
+
+  if (!existsSync(agentDir)) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
+
+  rmSync(agentDir, { recursive: true });
+  res.status(204).end();
 });
 
 module.exports = router;
