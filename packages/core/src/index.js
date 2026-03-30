@@ -9,5 +9,7 @@ module.exports = {
   JobManager: require('./job-manager'),
   resolveAgentsDir: require('./resolve-agents-dir'),
   resolveWorkspaceDir: require('./resolve-workspace-dir'),
+  resolveLogsDir: require('./resolve-logs-dir'),
   resolveCwd: require('./resolve-cwd'),
+  createJobLogger: require('./job-logger'),
 };

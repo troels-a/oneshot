@@ -3,7 +3,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 const { spawn } = require('child_process');
-const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir, resolveCwd } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir, resolveLogsDir, resolveCwd, createJobLogger } = require('@oneshot/core');
 
 const agentsDir = resolveAgentsDir();
 const [,, command, ...rest] = process.argv;
@@ -93,10 +93,18 @@ if (command === 'run') {
     const cwd = resolveCwd(agentDir, runPath);
     const { command } = prepareAgent(agentDir, providedArgs, cwd);
 
+    const { id, logDir, stdoutStream, stderrStream } = createJobLogger(resolveLogsDir());
+    process.stderr.write(`[oneshot] Job ${id} \u2014 logs: ${logDir}\n`);
+
     const child = spawn(command.cmd, command.args, {
-      stdio: 'inherit',
+      stdio: ['ignore', 'pipe', 'pipe'],
       cwd,
     });
+
+    child.stdout.pipe(stdoutStream);
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(stderrStream);
+    child.stderr.pipe(process.stderr);
 
     if (timeout) {
       setTimeout(() => child.kill('SIGTERM'), timeout * 1000);

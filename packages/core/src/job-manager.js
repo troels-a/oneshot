@@ -1,9 +1,9 @@
-const { randomUUID } = require('crypto');
 const path = require('path');
 const { spawn } = require('child_process');
-const { mkdirSync, readdirSync, statSync, rmSync, createWriteStream } = require('fs');
+const { readdirSync, statSync, rmSync } = require('fs');
 const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
+const createJobLogger = require('./job-logger');
 
 const MAX_COMPLETED_JOBS = 1000;
 
@@ -41,7 +41,7 @@ class JobManager {
     const cwd = resolveCwd(agentDir, options.path);
     const { config, command } = prepareAgent(agentDir, providedArgs, cwd);
 
-    const id = randomUUID();
+    const { id, logDir, stdoutStream, stderrStream } = createJobLogger(this.logsDir);
     const job = {
       id,
       agentName,
@@ -57,15 +57,11 @@ class JobManager {
         args: Object.keys(providedArgs).length ? providedArgs : null,
         path: options.path ?? null,
       },
-      logDir: path.join(this.logsDir, id),
+      logDir,
     };
     this.jobs.set(id, job);
 
-    mkdirSync(job.logDir, { recursive: true });
-
     const { cmd, args } = command;
-    const stdoutStream = createWriteStream(path.join(job.logDir, 'stdout.log'));
-    const stderrStream = createWriteStream(path.join(job.logDir, 'stderr.log'));
 
     const child = spawn(cmd, args, {
       stdio: ['ignore', 'pipe', 'pipe'],

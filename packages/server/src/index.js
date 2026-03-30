@@ -3,7 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { JobManager, resolveAgentsDir } = require('@oneshot/core');
+const { JobManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
 const Scheduler = require('./lib/scheduler');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
@@ -17,7 +17,7 @@ const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
 
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
-  const logsDir = options.logsDir || path.join(ROOT_DATA_DIR, 'logs');
+  const logsDir = options.logsDir || resolveLogsDir();
   const apiKey = process.env.API_KEY;
   const dashboardPassword = process.env.DASHBOARD_PASSWORD;
 
