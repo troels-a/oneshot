@@ -31,7 +31,7 @@ router.get('/agents', (req, res) => {
 router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) => {
   try {
     const { agent } = req.params;
-    const manager = req.jobManager;
+    const manager = req.runManager;
 
     const body = normalizeBody(req.body || {});
     const errors = validateBody(body);
@@ -39,13 +39,13 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
       return res.status(400).json({ error: errors.join('; ') });
     }
 
-    const existing = manager.getRunningJob(agent);
+    const existing = manager.getRunningRun(agent);
     if (existing) {
-      return res.status(409).json({ error: 'Agent already running', jobId: existing.id });
+      return res.status(409).json({ error: 'Agent already running', runId: existing.id });
     }
 
-    const job = await manager.dispatchJob(agent, body);
-    res.status(201).json({ jobId: job.id, status: job.status });
+    const { run } = await manager.dispatchRun(agent, body);
+    res.status(201).json({ runId: run.id, status: run.status });
   } catch (err) {
     if (err.code === 'ENOENT') {
       return res.status(404).json({ error: 'Agent not found' });

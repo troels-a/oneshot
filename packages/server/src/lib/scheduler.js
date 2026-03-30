@@ -9,8 +9,8 @@ const parseCronExpression = (cronParser.CronExpressionParser || cronParser.defau
 const MAX_SCHEDULES_PER_AGENT = 50;
 
 class Scheduler {
-  constructor({ jobManager, schedulesFile, agentsDir }) {
-    this.jobManager = jobManager;
+  constructor({ runManager, schedulesFile, agentsDir }) {
+    this.runManager = runManager;
     this.schedulesFile = schedulesFile;
     this.agentsDir = agentsDir;
     this.schedules = new Map();
@@ -104,7 +104,7 @@ class Scheduler {
   }
 
   async _onTick(schedule) {
-    const running = this.jobManager.getRunningJob(schedule.agent);
+    const running = this.runManager.getRunningRun(schedule.agent);
 
     schedule.lastRunAt = new Date().toISOString();
     schedule.nextRunAt = this._computeNextRun(schedule.cron);
@@ -113,7 +113,7 @@ class Scheduler {
       schedule.lastRunResult = 'skipped';
     } else {
       try {
-        await this.jobManager.dispatchJob(schedule.agent, schedule.options);
+        await this.runManager.dispatchRun(schedule.agent, schedule.options);
         schedule.lastRunResult = 'dispatched';
       } catch (err) {
         console.error(`Schedule ${schedule.id} dispatch error:`, err.message);

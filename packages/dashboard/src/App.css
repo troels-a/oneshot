@@ -212,8 +212,9 @@ body::after {
 /* ---- Welcome header ---- */
 .welcome-section {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
   padding: 8px 0 24px;
 }
 
@@ -743,16 +744,16 @@ body::after {
   color: #059669;
 }
 
-/* ---- Job detail ---- */
-.job-detail {
+/* ---- Run detail ---- */
+.run-detail {
   position: relative;
 }
 
-.job-detail .btn {
+.run-detail .btn {
   margin-bottom: 20px;
 }
 
-.job-info {
+.run-info {
   background: var(--surface);
   backdrop-filter: var(--blur);
   border: 1px solid var(--border);
@@ -761,22 +762,67 @@ body::after {
   margin-bottom: 20px;
 }
 
-.job-info h2 {
+.run-info h2 {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 12px;
 }
 
-.job-meta {
+.run-meta {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 8px;
   font-size: 14px;
 }
 
-.job-meta strong {
+.run-meta strong {
   color: var(--text-muted);
+}
+
+/* ---- Clear button ---- */
+.btn-clear {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-clear:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+/* ---- Pagination ---- */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pagination button:not(:disabled):hover {
+  background: var(--border);
 }
 
 /* ---- Logs ---- */

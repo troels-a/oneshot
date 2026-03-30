@@ -2,8 +2,7 @@
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
-const { spawn } = require('child_process');
-const { discoverAgents, parseAgentMd, prepareAgent, resolveAgentsDir, resolveLogsDir, resolveCwd, createJobLogger } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, RunManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
 
 const agentsDir = resolveAgentsDir();
 const [,, command, ...rest] = process.argv;
@@ -12,7 +11,8 @@ if (!command || command === 'help' || command === '--help') {
   console.log(`Usage:
   oneshot list                         List available agents
   oneshot info <agent>                 Show agent details
-  oneshot run <agent> [--key=value] [--path=dir]    Run an agent`);
+  oneshot run <agent> [--key=value] [--path=dir]    Run an agent
+  oneshot clear                        Clear completed and failed runs`);
   process.exit(0);
 }
 
@@ -61,7 +61,29 @@ if (command === 'info') {
   process.exit(0);
 }
 
-if (command === 'run') {
+if (command === 'clear') {
+  const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
+  const runs = manager.listRuns({});
+  const clearable = runs.filter(r => r.status === 'completed' || r.status === 'failed');
+
+  if (clearable.length === 0) {
+    console.log('No completed or failed runs to clear.');
+    process.exit(0);
+  }
+
+  const readline = require('readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question(`Clear ${clearable.length} completed/failed runs? (y/n) `, async (answer) => {
+    rl.close();
+    if (answer.toLowerCase() !== 'y') {
+      console.log('Cancelled.');
+      process.exit(0);
+    }
+    const cleared = await manager.clearRuns();
+    console.log(`Cleared ${cleared} runs.`);
+    process.exit(0);
+  });
+} else if (command === 'run') {
   const name = rest[0];
   if (!name) { console.error('Usage: oneshot run <agent> [--key=value ...]'); process.exit(1); }
 
@@ -87,38 +109,26 @@ if (command === 'run') {
     }
   }
 
-  const agentDir = path.join(agentsDir, name);
-
-  try {
-    const cwd = resolveCwd(agentDir, runPath);
-    const { command } = prepareAgent(agentDir, providedArgs, cwd);
-
-    const { id, logDir, stdoutStream, stderrStream } = createJobLogger(resolveLogsDir());
-    process.stderr.write(`[oneshot] Job ${id} \u2014 logs: ${logDir}\n`);
-
-    const child = spawn(command.cmd, command.args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      cwd,
+  (async () => {
+    const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
+    const { run, child, done } = await manager.dispatchRun(name, {
+      args: providedArgs,
+      timeout,
+      path: runPath,
+      source: 'cli',
     });
 
-    child.stdout.pipe(stdoutStream);
+    process.stderr.write(`[oneshot] Run ${run.id} \u2014 logs: ${run.logDir}\n`);
+
     child.stdout.pipe(process.stdout);
-    child.stderr.pipe(stderrStream);
     child.stderr.pipe(process.stderr);
 
-    if (timeout) {
-      setTimeout(() => child.kill('SIGTERM'), timeout * 1000);
-    }
-
-    child.on('close', (code) => process.exit(code ?? 1));
-    child.on('error', (err) => {
-      console.error(`Failed to start: ${err.message}`);
-      process.exit(1);
-    });
-  } catch (err) {
+    const result = await done;
+    process.exit(result.exitCode ?? 1);
+  })().catch(err => {
     console.error(err.message);
     process.exit(1);
-  }
+  });
 } else {
   console.error(`Unknown command: ${command}. Run "oneshot help" for usage.`);
   process.exit(1);

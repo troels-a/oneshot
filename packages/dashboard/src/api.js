@@ -38,27 +38,27 @@ export async function fetchAgents() {
   return data.agents;
 }
 
-export async function fetchJobs(filters = {}) {
+export async function fetchRuns(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
   if (filters.agent) params.set('agent', filters.agent);
   const qs = params.toString();
-  const res = await request(`/jobs${qs ? `?${qs}` : ''}`);
+  const res = await request(`/runs${qs ? `?${qs}` : ''}`);
   return res.json();
 }
 
-export async function fetchJob(id) {
-  const res = await request(`/jobs/${id}`);
+export async function fetchRun(id) {
+  const res = await request(`/runs/${id}`);
   return res.json();
 }
 
-export async function fetchJobLogs(id) {
-  const res = await request(`/jobs/${id}/logs`);
+export async function fetchRunLogs(id) {
+  const res = await request(`/runs/${id}/logs`);
   return res.json();
 }
 
-export async function fetchLogContent(jobId, filename, { offset = 0, limit = 50 } = {}) {
-  const res = await request(`/jobs/${jobId}/logs/${filename}?offset=${offset}&limit=${limit}`);
+export async function fetchLogContent(runId, filename, { offset = 0, limit = 50 } = {}) {
+  const res = await request(`/runs/${runId}/logs/${filename}?offset=${offset}&limit=${limit}`);
   return res.json();
 }
 
@@ -68,8 +68,13 @@ export async function fetchSchedules(agent) {
   return data.schedules;
 }
 
-export async function stopJob(id) {
-  const res = await request(`/jobs/${id}/stop`, { method: 'POST' });
+export async function clearRuns() {
+  const res = await request('/runs', { method: 'DELETE' });
+  return res.json();
+}
+
+export async function stopRun(id) {
+  const res = await request(`/runs/${id}/stop`, { method: 'POST' });
   return res.json();
 }
 

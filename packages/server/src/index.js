@@ -3,12 +3,12 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { JobManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
+const { RunManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
 const Scheduler = require('./lib/scheduler');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
 const agentsRouter = require('./routes/agents');
-const jobsRouter = require('./routes/jobs');
+const runsRouter = require('./routes/runs');
 const schedulesRouter = require('./routes/schedules');
 const statsRouter = require('./routes/stats');
 const createAuthRouter = require('./routes/auth');
@@ -23,9 +23,9 @@ function createApp(options = {}) {
 
   mkdirSync(logsDir, { recursive: true });
 
-  const manager = new JobManager({ logsDir, agentsDir });
+  const manager = new RunManager({ logsDir, agentsDir });
   const schedulesFile = options.schedulesFile || path.join(ROOT_DATA_DIR, 'schedules.json');
-  const scheduler = new Scheduler({ jobManager: manager, schedulesFile, agentsDir });
+  const scheduler = new Scheduler({ runManager: manager, schedulesFile, agentsDir });
   scheduler.loadFromDisk();
 
   const app = express();
@@ -41,14 +41,14 @@ function createApp(options = {}) {
   // Inject dependencies
   app.use((req, res, next) => {
     req.agentsDir = agentsDir;
-    req.jobManager = manager;
+    req.runManager = manager;
     req.scheduler = scheduler;
     next();
   });
 
   app.use(agentsRouter);
   app.use(schedulesRouter);
-  app.use(jobsRouter);
+  app.use(runsRouter);
   app.use(statsRouter);
 
   // Error handler
