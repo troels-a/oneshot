@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { getApiKey, setApiKey, clearApiKey, login } from './api';
 import Login from './components/Login';
-import Overview from './components/Overview';
 import Dashboard from './components/Dashboard';
 import RunDetail from './components/RunDetail';
 import './App.css';
 
-const VIEWS = ['dashboard', 'agents', 'runs', 'schedules'];
+const VIEWS = ['runs', 'agents', 'schedules'];
 
 export default function App() {
   const [authed, setAuthed] = useState(!!getApiKey());
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('runs');
   const [selectedRun, setSelectedRun] = useState(null);
 
   async function handleLogin(password) {
@@ -52,7 +51,13 @@ export default function App() {
           <div className="app-logo-icon">O</div>
           <span className="app-logo-text">oneshot</span>
         </div>
+      </nav>
 
+      <div className="welcome-section">
+        <div className="welcome-text">
+          <h1>{selectedRun ? 'Run Detail' : 'Welcome'}</h1>
+          <p>Your agent control room — monitoring runs, costs, and performance</p>
+        </div>
         <div className="app-nav-pills">
           {VIEWS.map((v) => (
             <button
@@ -64,20 +69,10 @@ export default function App() {
             </button>
           ))}
         </div>
-
-      </nav>
-
-      <div className="welcome-section">
-        <div className="welcome-text">
-          <h1>{selectedRun ? 'Run Detail' : 'Welcome'}</h1>
-          <p>Your agent control room — monitoring runs, costs, and performance</p>
-        </div>
       </div>
 
       {selectedRun ? (
         <RunDetail runId={selectedRun} onBack={handleBack} />
-      ) : view === 'dashboard' ? (
-        <Overview onSelectRun={handleSelectRun} />
       ) : (
         <Dashboard tab={view} onSelectRun={handleSelectRun} />
       )}

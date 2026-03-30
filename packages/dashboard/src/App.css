@@ -212,8 +212,9 @@ body::after {
 /* ---- Welcome header ---- */
 .welcome-section {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
   padding: 8px 0 24px;
 }
 
@@ -777,6 +778,51 @@ body::after {
 
 .run-meta strong {
   color: var(--text-muted);
+}
+
+/* ---- Clear button ---- */
+.btn-clear {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-clear:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+/* ---- Pagination ---- */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pagination button:not(:disabled):hover {
+  background: var(--border);
 }
 
 /* ---- Logs ---- */

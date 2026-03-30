@@ -78,4 +78,9 @@ router.post('/runs/:id/stop', (req, res) => {
   res.json({ stopped: true, id: req.params.id });
 });
 
+router.delete('/runs', async (req, res) => {
+  const cleared = await req.runManager.clearRuns();
+  res.json({ cleared });
+});
+
 module.exports = router;

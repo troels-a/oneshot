@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchRuns, fetchSchedules, stopRun } from '../api';
+import { fetchAgents, fetchRuns, fetchSchedules, stopRun, clearRuns } from '../api';
 
 const REFRESH_INTERVAL = 5000;
+const PAGE_SIZE = 25;
 
 function timeAgo(iso) {
   if (!iso) return '-';
@@ -30,6 +31,7 @@ export default function Dashboard({ tab, onSelectRun }) {
   const [schedules, setSchedules] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [agentFilter, setAgentFilter] = useState('');
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -64,6 +66,24 @@ export default function Dashboard({ tab, onSelectRun }) {
     return () => clearInterval(interval);
   }, [loadData]);
 
+  async function handleClear() {
+    if (!window.confirm('Clear all completed and failed runs?')) return;
+    try {
+      await clearRuns();
+      setPage(0);
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  const totalPages = Math.ceil(runs.length / PAGE_SIZE);
+  const clampedPage = Math.min(page, Math.max(0, totalPages - 1));
+  if (clampedPage !== page) setPage(clampedPage);
+  const start = clampedPage * PAGE_SIZE;
+  const pagedRuns = runs.slice(start, start + PAGE_SIZE);
+  const hasClearable = runs.some(r => r.status === 'completed' || r.status === 'failed');
+
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
@@ -72,17 +92,20 @@ export default function Dashboard({ tab, onSelectRun }) {
         <div className="glass-card">
           <div className="section-header" style={{ marginBottom: 16 }}>
             <span className="section-title">Runs</span>
-            <span className="section-badge">{runs.length} total</span>
+            <span className="section-badge">{runs.length} runs</span>
+            {hasClearable && (
+              <button className="btn-clear" onClick={handleClear}>Clear</button>
+            )}
           </div>
           <div className="filters">
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
               <option value="">All statuses</option>
               <option value="running">Running</option>
               <option value="completed">Completed</option>
               <option value="failed">Failed</option>
               <option value="pending">Pending</option>
             </select>
-            <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
+            <select value={agentFilter} onChange={(e) => { setAgentFilter(e.target.value); setPage(0); }}>
               <option value="">All agents</option>
               {agents.map((a) => (
                 <option key={a.name} value={a.name}>{a.name}</option>
@@ -92,40 +115,49 @@ export default function Dashboard({ tab, onSelectRun }) {
           {runs.length === 0 ? (
             <p className="empty">No runs found</p>
           ) : (
-            <table className="glass-table">
-              <thead>
-                <tr>
-                  <th>Agent</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>ID</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr key={run.id} className="clickable" onClick={() => onSelectRun(run.id)}>
-                    <td style={{ fontWeight: 500 }}>{run.agentName}</td>
-                    <td>{statusBadge(run.status)}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(run.startedAt)}</td>
-                    <td className="mono">{run.id.slice(0, 8)}</td>
-                    <td>
-                      {run.status === 'running' && (
-                        <button
-                          className="btn-kill"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            stopRun(run.id).then(loadData).catch(console.error);
-                          }}
-                        >
-                          Kill
-                        </button>
-                      )}
-                    </td>
+            <>
+              <table className="glass-table">
+                <thead>
+                  <tr>
+                    <th>Agent</th>
+                    <th>Status</th>
+                    <th>Started</th>
+                    <th>ID</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pagedRuns.map((run) => (
+                    <tr key={run.id} className="clickable" onClick={() => onSelectRun(run.id)}>
+                      <td style={{ fontWeight: 500 }}>{run.agentName}</td>
+                      <td>{statusBadge(run.status)}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{timeAgo(run.startedAt)}</td>
+                      <td className="mono">{run.id.slice(0, 8)}</td>
+                      <td>
+                        {run.status === 'running' && (
+                          <button
+                            className="btn-kill"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              stopRun(run.id).then(loadData).catch(console.error);
+                            }}
+                          >
+                            Kill
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button disabled={clampedPage === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
+                  <span>{start + 1}–{Math.min(start + PAGE_SIZE, runs.length)} of {runs.length}</span>
+                  <button disabled={clampedPage >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

@@ -68,6 +68,11 @@ export async function fetchSchedules(agent) {
   return data.schedules;
 }
 
+export async function clearRuns() {
+  const res = await request('/runs', { method: 'DELETE' });
+  return res.json();
+}
+
 export async function stopRun(id) {
   const res = await request(`/runs/${id}/stop`, { method: 'POST' });
   return res.json();

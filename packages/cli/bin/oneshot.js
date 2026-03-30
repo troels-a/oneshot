@@ -11,7 +11,8 @@ if (!command || command === 'help' || command === '--help') {
   console.log(`Usage:
   oneshot list                         List available agents
   oneshot info <agent>                 Show agent details
-  oneshot run <agent> [--key=value] [--path=dir]    Run an agent`);
+  oneshot run <agent> [--key=value] [--path=dir]    Run an agent
+  oneshot clear                        Clear completed and failed runs`);
   process.exit(0);
 }
 
@@ -60,7 +61,29 @@ if (command === 'info') {
   process.exit(0);
 }
 
-if (command === 'run') {
+if (command === 'clear') {
+  const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
+  const runs = manager.listRuns({});
+  const clearable = runs.filter(r => r.status === 'completed' || r.status === 'failed');
+
+  if (clearable.length === 0) {
+    console.log('No completed or failed runs to clear.');
+    process.exit(0);
+  }
+
+  const readline = require('readline');
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question(`Clear ${clearable.length} completed/failed runs? (y/n) `, async (answer) => {
+    rl.close();
+    if (answer.toLowerCase() !== 'y') {
+      console.log('Cancelled.');
+      process.exit(0);
+    }
+    const cleared = await manager.clearRuns();
+    console.log(`Cleared ${cleared} runs.`);
+    process.exit(0);
+  });
+} else if (command === 'run') {
   const name = rest[0];
   if (!name) { console.error('Usage: oneshot run <agent> [--key=value ...]'); process.exit(1); }
 

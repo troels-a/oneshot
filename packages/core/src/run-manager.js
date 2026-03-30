@@ -1,6 +1,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 const { existsSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync } = require('fs');
+const { rm } = require('fs/promises');
 const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
 const createRunLogger = require('./run-logger');
@@ -197,6 +198,22 @@ class RunManager {
         rmSync(dirPath, { recursive: true, force: true });
       }
     }
+  }
+
+  async clearRuns() {
+    this._loadDiskRuns();
+    const toClear = [];
+    for (const [id, run] of this.runs) {
+      if (run.status === 'running' || run.status === 'pending') continue;
+      toClear.push({ id, logDir: run.logDir });
+    }
+    await Promise.all(
+      toClear.map(({ id, logDir }) =>
+        (logDir ? rm(logDir, { recursive: true, force: true }).catch(() => {}) : Promise.resolve())
+          .then(() => this.runs.delete(id))
+      )
+    );
+    return toClear.length;
   }
 
   stopRun(id) {
