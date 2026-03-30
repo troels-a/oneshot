@@ -8,8 +8,8 @@ function argsToFlags(args) {
   return flags;
 }
 
-function buildCommand(entrypoint, agentDir, renderedPrompt, args) {
-  switch (entrypoint) {
+function buildCommand(runtime, agentDir, renderedPrompt, args) {
+  switch (runtime) {
     case 'claude':
       return {
         cmd: 'claude',
@@ -29,7 +29,7 @@ function buildCommand(entrypoint, agentDir, renderedPrompt, args) {
       };
 
     default:
-      throw new Error(`Unknown entrypoint: ${entrypoint}`);
+      throw new Error(`Unknown runtime: ${runtime}`);
   }
 }
 

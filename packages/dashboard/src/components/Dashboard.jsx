@@ -175,7 +175,7 @@ export default function Dashboard({ tab, onSelectRun }) {
                   <div key={agent.name} className="agent-card">
                     <div className="agent-card-header">
                       <h3>{agent.name}</h3>
-                      <span className={`badge badge-type-${agent.entrypoint}`}>{agent.entrypoint}</span>
+                      <span className={`badge badge-type-${agent.runtime}`}>{agent.runtime}</span>
                     </div>
                     <div className="agent-stats">
                       <span>{agentRuns.length} runs</span>

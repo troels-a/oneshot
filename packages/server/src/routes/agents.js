@@ -22,7 +22,7 @@ const router = Router();
 router.get('/agents', (req, res) => {
   const agents = discoverAgents(req.agentsDir).map(a => ({
     name: a.name,
-    entrypoint: a.config.entrypoint,
+    runtime: a.config.runtime,
     args: a.config.args,
   }));
   res.json({ agents });

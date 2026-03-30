@@ -31,7 +31,7 @@ describe('buildCommand', () => {
     assert.ok(args.includes('1'));
   });
 
-  it('throws on unknown entrypoint', () => {
-    assert.throws(() => buildCommand('python', agentDir, '', {}), /Unknown entrypoint/);
+  it('throws on unknown runtime', () => {
+    assert.throws(() => buildCommand('python', agentDir, '', {}), /Unknown runtime/);
   });
 });

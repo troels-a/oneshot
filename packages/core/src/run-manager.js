@@ -49,7 +49,7 @@ class RunManager {
     const run = {
       id,
       agentName,
-      entrypoint: config.entrypoint,
+      runtime: config.runtime,
       source: options.source || 'server',
       status: 'pending',
       pid: null,

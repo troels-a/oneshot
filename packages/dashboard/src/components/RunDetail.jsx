@@ -96,7 +96,7 @@ export default function RunDetail({ runId, onBack }) {
         <div className="run-meta">
           <div><strong>ID:</strong> <span className="mono">{run.id}</span></div>
           <div><strong>Status:</strong> <span className={`badge badge-${run.status}`}>{run.status}</span></div>
-          <div><strong>Entrypoint:</strong> {run.entrypoint || '-'}</div>
+          <div><strong>Runtime:</strong> {run.runtime || run.entrypoint || '-'}</div>
           <div><strong>PID:</strong> {run.pid || '-'}</div>
           <div><strong>Started:</strong> {run.startedAt ? new Date(run.startedAt).toLocaleString() : '-'}</div>
           <div><strong>Completed:</strong> {run.completedAt ? new Date(run.completedAt).toLocaleString() : '-'}</div>

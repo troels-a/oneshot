@@ -24,7 +24,7 @@ describe('parseAgentMd', () => {
 
   it('parses a valid agent.md with all fields', () => {
     const p = writeAgent(`---
-entrypoint: claude
+runtime: claude
 args:
   - name: greeting
     description: A greeting
@@ -39,7 +39,7 @@ Hello {{ args.greeting }} {{ args.target }}
 {{ commands.date }}`);
 
     const result = parseAgentMd(p);
-    assert.strictEqual(result.entrypoint, 'claude');
+    assert.strictEqual(result.runtime, 'claude');
     assert.strictEqual(result.args.length, 2);
     assert.strictEqual(result.args[0].name, 'greeting');
     assert.strictEqual(result.args[0].required, true);
@@ -51,7 +51,7 @@ Hello {{ args.greeting }} {{ args.target }}
 
   it('accepts string-style args', () => {
     const p = writeAgent(`---
-entrypoint: bash
+runtime: bash
 args:
   - foo
   - bar
@@ -64,23 +64,33 @@ body`);
     assert.strictEqual(result.args[1].name, 'bar');
   });
 
-  it('throws on missing entrypoint', () => {
+  it('throws on missing runtime', () => {
     const p = writeAgent(`---
 args: []
 commands: []
 ---
 body`);
 
-    assert.throws(() => parseAgentMd(p), /missing entrypoint/);
+    assert.throws(() => parseAgentMd(p), /missing runtime/);
   });
 
-  it('throws on invalid entrypoint', () => {
+  it('throws on invalid runtime', () => {
     const p = writeAgent(`---
-entrypoint: python
+runtime: python
 ---
 body`);
 
-    assert.throws(() => parseAgentMd(p), /Invalid entrypoint/);
+    assert.throws(() => parseAgentMd(p), /Invalid runtime/);
+  });
+
+  it('accepts legacy entrypoint field for backwards compat', () => {
+    const p = writeAgent(`---
+entrypoint: node
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.runtime, 'node');
   });
 
   it('throws on missing frontmatter', () => {

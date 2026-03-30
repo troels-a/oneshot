@@ -23,9 +23,9 @@ if (command === 'list') {
     process.exit(0);
   }
   const nameWidth = Math.max(...agents.map(a => a.name.length), 4);
-  console.log('NAME'.padEnd(nameWidth + 2) + 'ENTRYPOINT');
+  console.log('NAME'.padEnd(nameWidth + 2) + 'RUNTIME');
   for (const agent of agents) {
-    console.log(agent.name.padEnd(nameWidth + 2) + agent.config.entrypoint);
+    console.log(agent.name.padEnd(nameWidth + 2) + agent.config.runtime);
   }
   process.exit(0);
 }
@@ -37,7 +37,7 @@ if (command === 'info') {
   try {
     const config = parseAgentMd(agentMdPath);
     console.log(`Agent: ${name}`);
-    console.log(`Entrypoint: ${config.entrypoint}`);
+    console.log(`Runtime: ${config.runtime}`);
     if (config.args.length) {
       console.log('\nArguments:');
       for (const arg of config.args) {

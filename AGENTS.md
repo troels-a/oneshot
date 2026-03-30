@@ -23,8 +23,8 @@ Agents live in the `agents/` directory (configurable via `ONESHOT_AGENTS_DIR`). 
 agents/
   my-agent/
     agent.md          # Required — defines the agent
-    index.js          # Required if entrypoint: node
-    main.sh           # Required if entrypoint: bash
+    index.js          # Required if runtime: node
+    main.sh           # Required if runtime: bash
 ```
 
 ### agent.md Format
@@ -33,7 +33,7 @@ The file uses YAML frontmatter followed by a body:
 
 ```yaml
 ---
-entrypoint: claude|node|bash
+runtime: claude|node|bash
 args:
   - name: arg_name
     description: What this argument does
@@ -48,13 +48,13 @@ Body text goes here. Use {{ args.arg_name }} and {{ commands.cmd_name }}
 to interpolate values.
 ```
 
-### Entrypoints
+### Runtimes
 
 **`claude`** — The body becomes the prompt passed to `claude -p`. Best for tasks that need an AI coding agent with full tool access.
 
 ```yaml
 ---
-entrypoint: claude
+runtime: claude
 args:
   - name: task
     description: What to work on
@@ -71,7 +71,7 @@ Today is {{ commands.date }}. Please {{ args.task }}.
 
 ```yaml
 ---
-entrypoint: node
+runtime: node
 args:
   - name: url
     description: URL to fetch
@@ -83,7 +83,7 @@ args:
 
 ```yaml
 ---
-entrypoint: bash
+runtime: bash
 args:
   - name: target
     description: Deploy target
