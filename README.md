@@ -35,13 +35,13 @@ npm run start   # Starts both the API server and dashboard
 
 ## Dashboard
 
-![Runs](screenshots/runs.png)
+![Runs](screenshots/runs.jpg)
 
-![Agents](screenshots/agents.png)
+![Agents](screenshots/agents.jpg)
 
-![Schedules](screenshots/schedules.png)
+![Schedules](screenshots/schedules.jpg)
 
-![Agent Editor](screenshots/agent-editor.png)
+![Agent Editor](screenshots/agent-editor.jpg)
 
 ## Creating an Agent
 
