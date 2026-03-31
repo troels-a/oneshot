@@ -14,4 +14,6 @@ module.exports = {
   resolveLogsDir: require('./resolve-logs-dir'),
   resolveCwd: require('./resolve-cwd'),
   createRunLogger: require('./run-logger'),
+  createWorktree: require('./worktree').createWorktree,
+  removeWorktree: require('./worktree').removeWorktree,
 };

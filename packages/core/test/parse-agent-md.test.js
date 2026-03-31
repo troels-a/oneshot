@@ -97,4 +97,25 @@ body`);
     const p = writeAgent('just a body');
     assert.throws(() => parseAgentMd(p), /missing frontmatter/);
   });
+
+  it('parses worktree: true from frontmatter', () => {
+    const p = writeAgent(`---
+runtime: claude
+worktree: true
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.worktree, true);
+  });
+
+  it('defaults worktree to false when omitted', () => {
+    const p = writeAgent(`---
+runtime: bash
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.worktree, false);
+  });
 });

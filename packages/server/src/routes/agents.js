@@ -28,6 +28,7 @@ router.get('/agents', (req, res) => {
     name: a.name,
     runtime: a.config.runtime,
     args: a.config.args,
+    worktree: a.config.worktree,
   }));
   res.json({ agents });
 });
@@ -76,11 +77,12 @@ router.get('/agents/:agent', validateParams, (req, res) => {
     args: config.args,
     commands: config.commands,
     body: config.body,
+    worktree: config.worktree,
   });
 });
 
 router.post('/agents', (req, res) => {
-  const { name, runtime, args, commands, body } = req.body;
+  const { name, runtime, args, commands, body, worktree } = req.body;
 
   if (!name || !VALID_NAME.test(name)) {
     return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
@@ -94,11 +96,11 @@ router.post('/agents', (req, res) => {
     return res.status(409).json({ error: 'Agent already exists' });
   }
 
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '' });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
   mkdirSync(agentDir, { recursive: true });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '' });
+  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
 });
 
 router.put('/agents/:agent', validateParams, (req, res) => {
@@ -109,14 +111,14 @@ router.put('/agents/:agent', validateParams, (req, res) => {
     return res.status(404).json({ error: 'Agent not found' });
   }
 
-  const { runtime, args, commands, body } = req.body;
+  const { runtime, args, commands, body, worktree } = req.body;
   if (!runtime || !VALID_RUNTIMES.has(runtime)) {
     return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
   }
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '' });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '' });
+  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
 });
 
 router.delete('/agents/:agent', validateParams, (req, res) => {

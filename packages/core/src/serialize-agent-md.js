@@ -1,6 +1,6 @@
 const YAML = require('yaml');
 
-function serializeAgentMd({ runtime, args, commands, body }) {
+function serializeAgentMd({ runtime, args, commands, body, worktree }) {
   const frontmatter = { runtime };
 
   if (Array.isArray(args) && args.length > 0) {
@@ -9,6 +9,10 @@ function serializeAgentMd({ runtime, args, commands, body }) {
 
   if (Array.isArray(commands) && commands.length > 0) {
     frontmatter.commands = commands;
+  }
+
+  if (worktree) {
+    frontmatter.worktree = true;
   }
 
   const yamlStr = YAML.stringify(frontmatter).trimEnd();
