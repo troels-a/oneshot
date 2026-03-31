@@ -38,6 +38,7 @@ if (command === 'info') {
     const config = parseAgentMd(agentMdPath);
     console.log(`Agent: ${name}`);
     console.log(`Runtime: ${config.runtime}`);
+    console.log(`Worktree: ${config.worktree}`);
     if (config.args.length) {
       console.log('\nArguments:');
       for (const arg of config.args) {

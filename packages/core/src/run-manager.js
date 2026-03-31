@@ -6,6 +6,7 @@ const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
 const createRunLogger = require('./run-logger');
 const extractResult = require('./extract-result');
+const { createWorktree, removeWorktree } = require('./worktree');
 
 const MAX_COMPLETED_RUNS = 1000;
 
@@ -47,6 +48,14 @@ class RunManager {
     const { config, command } = prepareAgent(agentDir, providedArgs, cwd);
 
     const { id, logDir, stdoutStream, stderrStream } = createRunLogger(this.logsDir);
+
+    let worktreeInfo = null;
+    let spawnCwd = cwd;
+    if (config.worktree) {
+      worktreeInfo = createWorktree(cwd, id, agentName);
+      spawnCwd = worktreeInfo.worktreeDir;
+    }
+
     const run = {
       id,
       agentName,
@@ -64,6 +73,7 @@ class RunManager {
         path: options.path ?? null,
       },
       logDir,
+      worktree: worktreeInfo ? { dir: worktreeInfo.worktreeDir, branch: worktreeInfo.branch, repoRoot: worktreeInfo.repoRoot } : null,
     };
     this.runs.set(id, run);
 
@@ -71,7 +81,7 @@ class RunManager {
 
     const child = spawn(cmd, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
-      cwd,
+      cwd: spawnCwd,
     });
 
     child.stdout.pipe(stdoutStream);
@@ -107,6 +117,9 @@ class RunManager {
             run.resultMeta = null;
           }
           command.cleanup?.();
+          if (run.worktree) {
+            try { removeWorktree(run.worktree.repoRoot, run.worktree.dir); } catch {}
+          }
           this._persistRun(run);
           this._evictOldRuns();
           resolve({ exitCode: code, signal: signal || null });
@@ -124,6 +137,9 @@ class RunManager {
         run.status = 'failed';
         run.completedAt = new Date().toISOString();
         this.processes.delete(run.id);
+        if (run.worktree) {
+          try { removeWorktree(run.worktree.repoRoot, run.worktree.dir); } catch {}
+        }
         this._persistRun(run);
         resolve({ exitCode: null, signal: null, error: err });
       });

@@ -29,12 +29,14 @@ function parseAgentMd(filePath) {
   }) : [];
 
   const commands = Array.isArray(frontmatter.commands) ? frontmatter.commands : [];
+  const worktree = frontmatter.worktree === true;
 
   return {
     runtime,
     args,
     commands,
     body,
+    worktree,
   };
 }
 
