@@ -19,8 +19,8 @@ const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
   const logsDir = options.logsDir || resolveLogsDir();
-  const apiKey = process.env.API_KEY;
-  const dashboardPassword = process.env.DASHBOARD_PASSWORD;
+  const apiKey = process.env.ONESHOT_API_KEY;
+  const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
 
   mkdirSync(logsDir, { recursive: true });
 
@@ -64,7 +64,7 @@ function createApp(options = {}) {
 
 if (require.main === module) {
   const { app, manager, scheduler } = createApp();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.ONESHOT_API_PORT || 3000;
 
   const server = app.listen(PORT, () => {
     console.log(`oneshot server listening on port ${PORT}`);

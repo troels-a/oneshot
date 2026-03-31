@@ -37,9 +37,9 @@ async function main() {
   }
 
   const missing = [];
-  if (!existing.API_KEY) missing.push('API_KEY');
-  if (!existing.DASHBOARD_PASSWORD) missing.push('DASHBOARD_PASSWORD');
-  if (!existing.PORT) missing.push('PORT');
+  if (!existing.ONESHOT_API_KEY) missing.push('ONESHOT_API_KEY');
+  if (!existing.ONESHOT_DASHBOARD_PASSWORD) missing.push('ONESHOT_DASHBOARD_PASSWORD');
+  if (!existing.ONESHOT_API_PORT) missing.push('ONESHOT_API_PORT');
   if (!existing.ONESHOT_AGENTS_DIR) missing.push('ONESHOT_AGENTS_DIR');
   if (!existing.ONESHOT_WORKSPACE_DIR) missing.push('ONESHOT_WORKSPACE_DIR');
 
@@ -50,16 +50,16 @@ async function main() {
       console.log(`  .env exists but missing: ${missing.join(', ')}\n`);
     }
 
-    if (!existing.API_KEY) {
+    if (!existing.ONESHOT_API_KEY) {
       const genKey = randomBytes(24).toString('base64url');
-      existing.API_KEY = await ask(`  API key [${genKey}]: `, genKey);
+      existing.ONESHOT_API_KEY = await ask(`  API key [${genKey}]: `, genKey);
     }
-    if (!existing.DASHBOARD_PASSWORD) {
+    if (!existing.ONESHOT_DASHBOARD_PASSWORD) {
       const genPassword = randomBytes(16).toString('base64url');
-      existing.DASHBOARD_PASSWORD = await ask(`  Dashboard password [${genPassword}]: `, genPassword);
+      existing.ONESHOT_DASHBOARD_PASSWORD = await ask(`  Dashboard password [${genPassword}]: `, genPassword);
     }
-    if (!existing.PORT) {
-      existing.PORT = await ask('  Server port [3000]: ', '3000');
+    if (!existing.ONESHOT_API_PORT) {
+      existing.ONESHOT_API_PORT = await ask('  Server port [3000]: ', '3000');
     }
     if (!existing.ONESHOT_AGENTS_DIR) {
       existing.ONESHOT_AGENTS_DIR = await ask('  Agents directory [./agents]: ', './agents');
@@ -68,7 +68,12 @@ async function main() {
       existing.ONESHOT_WORKSPACE_DIR = await ask('  Workspace directory (base for dispatch --path) []: ', '');
     }
 
-    writeFileSync(envPath, `API_KEY=${existing.API_KEY}\nDASHBOARD_PASSWORD=${existing.DASHBOARD_PASSWORD}\nPORT=${existing.PORT}\nONESHOT_AGENTS_DIR=${existing.ONESHOT_AGENTS_DIR}\nONESHOT_WORKSPACE_DIR=${existing.ONESHOT_WORKSPACE_DIR}\n`);
+    const managed = ['ONESHOT_API_KEY', 'ONESHOT_DASHBOARD_PASSWORD', 'ONESHOT_API_PORT', 'ONESHOT_AGENTS_DIR', 'ONESHOT_WORKSPACE_DIR'];
+    const lines = managed.map(k => `${k}=${existing[k]}`);
+    for (const [k, v] of Object.entries(existing)) {
+      if (!managed.includes(k)) lines.push(`${k}=${v}`);
+    }
+    writeFileSync(envPath, lines.join('\n') + '\n');
     console.log('\n  .env written ✓');
   }
 
