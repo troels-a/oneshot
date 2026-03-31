@@ -1,5 +1,5 @@
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const { existsSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync } = require('fs');
 const { rm } = require('fs/promises');
 const prepareAgent = require('./prepare-agent');
@@ -52,8 +52,14 @@ class RunManager {
     let worktreeInfo = null;
     let spawnCwd = cwd;
     if (config.worktree) {
-      worktreeInfo = createWorktree(cwd, id, agentName);
-      spawnCwd = worktreeInfo.worktreeDir;
+      try {
+        worktreeInfo = createWorktree(cwd, id, agentName);
+        spawnCwd = worktreeInfo.worktreeDir;
+      } catch (err) {
+        stdoutStream.destroy();
+        stderrStream.destroy();
+        throw err;
+      }
     }
 
     const run = {
@@ -73,7 +79,8 @@ class RunManager {
         path: options.path ?? null,
       },
       logDir,
-      worktree: worktreeInfo ? { dir: worktreeInfo.worktreeDir, branch: worktreeInfo.branch, repoRoot: worktreeInfo.repoRoot } : null,
+      worktree: worktreeInfo ? { dir: worktreeInfo.worktreeDir, branch: worktreeInfo.branch } : null,
+      _worktreeRepoRoot: worktreeInfo ? worktreeInfo.repoRoot : null,
     };
     this.runs.set(id, run);
 
@@ -117,8 +124,8 @@ class RunManager {
             run.resultMeta = null;
           }
           command.cleanup?.();
-          if (run.worktree) {
-            try { removeWorktree(run.worktree.repoRoot, run.worktree.dir); } catch {}
+          if (run.worktree && run._worktreeRepoRoot) {
+            try { removeWorktree(run._worktreeRepoRoot, run.worktree.dir); } catch {}
           }
           this._persistRun(run);
           this._evictOldRuns();
@@ -137,8 +144,8 @@ class RunManager {
         run.status = 'failed';
         run.completedAt = new Date().toISOString();
         this.processes.delete(run.id);
-        if (run.worktree) {
-          try { removeWorktree(run.worktree.repoRoot, run.worktree.dir); } catch {}
+        if (run.worktree && run._worktreeRepoRoot) {
+          try { removeWorktree(run._worktreeRepoRoot, run.worktree.dir); } catch {}
         }
         this._persistRun(run);
         resolve({ exitCode: null, signal: null, error: err });
@@ -150,7 +157,8 @@ class RunManager {
 
   _persistRun(run) {
     const filePath = path.join(run.logDir, 'run.json');
-    writeFileSync(filePath, JSON.stringify(run, null, 2));
+    const { _worktreeRepoRoot, ...serializable } = run;
+    writeFileSync(filePath, JSON.stringify(serializable, null, 2));
   }
 
   _loadDiskRun(id) {
@@ -202,6 +210,12 @@ class RunManager {
     } catch {
       run.status = 'failed';
       run.completedAt = run.completedAt || new Date().toISOString();
+      if (run.worktree) {
+        try {
+          const repoRoot = run._worktreeRepoRoot || execFileSync('git', ['-C', run.worktree.dir, 'rev-parse', '--show-toplevel'], { stdio: 'pipe' }).toString().trim();
+          removeWorktree(repoRoot, run.worktree.dir);
+        } catch {}
+      }
       this._persistRun(run);
     }
   }
