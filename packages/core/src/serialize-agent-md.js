@@ -1,0 +1,20 @@
+const YAML = require('yaml');
+
+function serializeAgentMd({ runtime, args, commands, body }) {
+  const frontmatter = { runtime };
+
+  if (Array.isArray(args) && args.length > 0) {
+    frontmatter.args = args;
+  }
+
+  if (Array.isArray(commands) && commands.length > 0) {
+    frontmatter.commands = commands;
+  }
+
+  const yamlStr = YAML.stringify(frontmatter).trimEnd();
+  const normalizedBody = (body || '').replace(/^\n+/, '');
+
+  return `---\n${yamlStr}\n---\n${normalizedBody}\n`;
+}
+
+module.exports = serializeAgentMd;

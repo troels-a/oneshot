@@ -16,16 +16,44 @@ function timeAgo(iso) {
 }
 
 function statusBadge(status) {
-  const cls = {
-    running: 'badge-running',
-    completed: 'badge-completed',
-    failed: 'badge-failed',
-    pending: 'badge-pending',
-  }[status] || '';
-  return <span className={`badge ${cls}`}>{status}</span>;
+  const icons = {
+    running: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <circle cx="6" cy="6" r="4" stroke="#8AADC0" strokeWidth="1.5" fill="none"/>
+      </svg>
+    ),
+    completed: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M3 6.5L5 8.5L9 3.5" stroke="#7DAF8A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    failed: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M3.5 3.5L8.5 8.5M8.5 3.5L3.5 8.5" stroke="#C08080" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+    pending: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <circle cx="6" cy="6" r="4" stroke="#C0A878" strokeWidth="1.5" fill="none"/>
+        <path d="M6 4V6.5L7.5 7.5" stroke="#C0A878" strokeWidth="1.2" strokeLinecap="round"/>
+      </svg>
+    ),
+  };
+  const colors = {
+    running: '#8AADC0',
+    completed: '#7DAF8A',
+    failed: '#C08080',
+    pending: '#C0A878',
+  };
+  return (
+    <span className="status-indicator">
+      {icons[status]}
+      <span style={{color: colors[status] || '#888'}}>{status}</span>
+    </span>
+  );
 }
 
-export default function Dashboard({ tab, onSelectRun }) {
+export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [agents, setAgents] = useState([]);
   const [runs, setRuns] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -172,18 +200,22 @@ export default function Dashboard({ tab, onSelectRun }) {
                 const agentRuns = runs.filter((r) => r.agentName === agent.name);
                 const running = agentRuns.filter((r) => r.status === 'running').length;
                 return (
-                  <div key={agent.name} className="agent-card">
+                  <div key={agent.name} className="agent-card" onClick={() => onSelectAgent(agent.name)} style={{cursor: 'pointer'}}>
                     <div className="agent-card-header">
                       <h3>{agent.name}</h3>
-                      <span className={`badge badge-type-${agent.runtime}`}>{agent.runtime}</span>
+                      <span className="badge badge-runtime-hollow">{agent.runtime}</span>
                     </div>
                     <div className="agent-stats">
                       <span>{agentRuns.length} runs</span>
-                      {running > 0 && <span className="badge badge-running">{running} running</span>}
+                      {running > 0 && <span className="badge badge-activity">{running} running</span>}
                     </div>
                   </div>
                 );
               })}
+              <div className="agent-card agent-card-new" onClick={() => onSelectAgent('__new__')}>
+                <span className="new-agent-plus">+</span>
+                <span>New Agent</span>
+              </div>
             </div>
           )}
         </div>

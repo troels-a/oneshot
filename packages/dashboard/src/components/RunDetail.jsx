@@ -105,6 +105,22 @@ export default function RunDetail({ runId, onBack }) {
         </div>
       </div>
 
+      {run.result && (
+        <div className="glass-card" style={{marginBottom: 16}}>
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10}}>
+            <h3 style={{margin: 0}}>Result</h3>
+            {run.resultMeta && (
+              <div style={{display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)'}}>
+                {run.resultMeta.num_turns != null && <span>{run.resultMeta.num_turns} turns</span>}
+                {run.resultMeta.duration_ms != null && <span>{(run.resultMeta.duration_ms / 1000).toFixed(1)}s</span>}
+                {run.resultMeta.cost != null && <span>${run.resultMeta.cost.toFixed(4)}</span>}
+              </div>
+            )}
+          </div>
+          <pre className="run-result">{run.result}</pre>
+        </div>
+      )}
+
       <div className="log-section">
         <h3>Timeline</h3>
         {logFiles.length === 0 ? (

@@ -1,4 +1,6 @@
 const path = require('path');
+const os = require('os');
+const { writeFileSync, unlinkSync } = require('fs');
 
 function argsToFlags(args) {
   const flags = [];
@@ -16,17 +18,25 @@ function buildCommand(runtime, agentDir, renderedPrompt, args) {
         args: ['-p', renderedPrompt, '--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose'],
       };
 
-    case 'node':
+    case 'node': {
+      const tmpFile = path.join(os.tmpdir(), `oneshot-${Date.now()}-${Math.random().toString(36).slice(2)}.js`);
+      writeFileSync(tmpFile, renderedPrompt);
       return {
         cmd: 'node',
-        args: [path.join(agentDir, 'index.js'), ...argsToFlags(args)],
+        args: [tmpFile, ...argsToFlags(args)],
+        cleanup: () => { try { unlinkSync(tmpFile); } catch {} },
       };
+    }
 
-    case 'bash':
+    case 'bash': {
+      const tmpFile = path.join(os.tmpdir(), `oneshot-${Date.now()}-${Math.random().toString(36).slice(2)}.sh`);
+      writeFileSync(tmpFile, renderedPrompt);
       return {
         cmd: 'bash',
-        args: [path.join(agentDir, 'main.sh'), ...argsToFlags(args)],
+        args: [tmpFile, ...argsToFlags(args)],
+        cleanup: () => { try { unlinkSync(tmpFile); } catch {} },
       };
+    }
 
     default:
       throw new Error(`Unknown runtime: ${runtime}`);

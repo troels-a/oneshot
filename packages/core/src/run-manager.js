@@ -5,6 +5,7 @@ const { rm } = require('fs/promises');
 const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
 const createRunLogger = require('./run-logger');
+const extractResult = require('./extract-result');
 
 const MAX_COMPLETED_RUNS = 1000;
 
@@ -94,9 +95,28 @@ class RunManager {
         run.signal = signal || null;
         run.status = (code === 0) ? 'completed' : 'failed';
         this.processes.delete(run.id);
-        this._persistRun(run);
-        this._evictOldRuns();
-        resolve({ exitCode: code, signal: signal || null });
+
+        // Wait for stdout stream to flush before extracting result
+        const extract = () => {
+          try {
+            const { result, meta } = extractResult(run.logDir, run.runtime);
+            run.result = result;
+            run.resultMeta = meta;
+          } catch {
+            run.result = null;
+            run.resultMeta = null;
+          }
+          command.cleanup?.();
+          this._persistRun(run);
+          this._evictOldRuns();
+          resolve({ exitCode: code, signal: signal || null });
+        };
+
+        if (stdoutStream.writableFinished) {
+          extract();
+        } else {
+          stdoutStream.on('finish', extract);
+        }
       });
 
       child.on('error', (err) => {

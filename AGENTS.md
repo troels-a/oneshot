@@ -22,10 +22,11 @@ Agents live in the `agents/` directory (configurable via `ONESHOT_AGENTS_DIR`). 
 ```
 agents/
   my-agent/
-    agent.md          # Required — defines the agent
-    index.js          # Required if runtime: node
-    main.sh           # Required if runtime: bash
+    agent.md          # Required — defines the agent (config + code)
+    helpers.js        # Optional — supporting files (any runtime)
 ```
+
+Each agent is a single `agent.md` file. The body of the file is the program: a prompt for `claude`, JavaScript for `node`, or a shell script for `bash`. Supporting files can be added to the directory for `require()` or `source` usage.
 
 ### agent.md Format
 
@@ -67,7 +68,7 @@ commands:
 Today is {{ commands.date }}. Please {{ args.task }}.
 ```
 
-**`node`** — Runs `node <agent-dir>/index.js` with args as `--key value` flags. Best for programmatic tasks.
+**`node`** — The body is JavaScript, executed via `node`. Args are passed as `--key value` flags. Best for programmatic tasks.
 
 ```yaml
 ---
@@ -77,9 +78,14 @@ args:
     description: URL to fetch
     required: true
 ---
+
+const [,, ...argv] = process.argv;
+const url = argv[argv.indexOf('--url') + 1];
+const res = await fetch(url);
+console.log(await res.text());
 ```
 
-**`bash`** — Runs `bash <agent-dir>/main.sh` with args as `--key value` flags. Best for shell automation.
+**`bash`** — The body is a shell script, executed via `bash`. Args are passed as `--key value` flags. Best for shell automation.
 
 ```yaml
 ---
@@ -89,6 +95,9 @@ args:
     description: Deploy target
     default: staging
 ---
+
+#!/usr/bin/env bash
+echo "Deploying to {{ args.target }}..."
 ```
 
 ### Args

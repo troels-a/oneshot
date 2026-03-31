@@ -44,7 +44,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ---- Gradient background blobs ---- */
+/* ---- Metaballs background ---- */
 body::before,
 body::after {
   content: '';
@@ -55,21 +55,21 @@ body::after {
 }
 
 body::before {
-  top: -100px;
-  left: 200px;
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(180, 210, 140, 0.4) 0%, transparent 70%);
-  filter: blur(40px);
+  top: -120px;
+  left: 10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(210, 205, 195, 0.5) 0%, transparent 70%);
+  filter: blur(60px);
 }
 
 body::after {
-  top: 100px;
-  right: 100px;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(100, 180, 220, 0.35) 0%, transparent 70%);
-  filter: blur(40px);
+  top: 30%;
+  right: 5%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(200, 195, 185, 0.45) 0%, transparent 70%);
+  filter: blur(60px);
 }
 
 .bg-blob-1,
@@ -81,21 +81,21 @@ body::after {
 }
 
 .bg-blob-1 {
-  bottom: 50px;
-  left: 300px;
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(220, 170, 80, 0.3) 0%, transparent 70%);
-  filter: blur(40px);
+  bottom: -50px;
+  left: 25%;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(215, 210, 200, 0.4) 0%, transparent 70%);
+  filter: blur(60px);
 }
 
 .bg-blob-2 {
-  bottom: -50px;
-  right: 200px;
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(180, 140, 200, 0.25) 0%, transparent 70%);
-  filter: blur(40px);
+  bottom: 10%;
+  right: 15%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(205, 200, 190, 0.35) 0%, transparent 70%);
+  filter: blur(60px);
 }
 
 /* ---- Layout ---- */
@@ -122,18 +122,8 @@ body::after {
   gap: 10px;
 }
 
-.app-logo-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--orange), #eab308);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
-  color: white;
+.app-logo svg {
+  color: var(--text);
 }
 
 .app-logo-text {
@@ -749,6 +739,21 @@ body::after {
   position: relative;
 }
 
+.run-result {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+}
+
 .run-detail .btn {
   margin-bottom: 20px;
 }
@@ -1003,3 +1008,78 @@ body::after {
   padding: 16px;
   color: var(--red);
 }
+
+/* Status indicators */
+.status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+
+/* Hollow runtime badges */
+.badge-runtime-hollow { background: transparent; border: 1px solid #999; color: #999; }
+
+/* Activity badge */
+.badge-activity { background: rgba(0,0,0,0.06); color: #888; }
+
+/* New agent card */
+.agent-card-new { border: 2px dashed rgba(0,0,0,0.12); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; background: transparent; min-height: 82px; }
+.agent-card-new:hover { border-color: rgba(0,0,0,0.2); }
+.new-agent-plus { font-size: 22px; font-weight: 300; color: #bbb; line-height: 1; }
+
+/* Agent editor */
+.agent-editor-header { display: flex; align-items: center; gap: 12px; padding: 8px 0 16px; }
+.agent-editor-back { color: var(--text-muted); cursor: pointer; background: none; border: none; font-family: var(--font-body); font-size: 13px; }
+.agent-editor-back:hover { color: var(--text); }
+.agent-editor-name { font-family: var(--font-heading); font-size: 18px; font-weight: 600; }
+.agent-editor-sep { color: #ccc; }
+.agent-editor-layout { display: flex; gap: 16px; }
+.agent-editor-left { width: 460px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+.agent-editor-right { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.agent-editor-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Runtime toggle */
+.runtime-toggle { display: flex; gap: 8px; }
+.runtime-option { padding: 8px 20px; border-radius: 8px; border: 1.5px solid rgba(0,0,0,0.08); background: rgba(255,255,255,0.5); cursor: pointer; font-family: var(--font-body); font-size: 13px; color: #888; transition: all 0.15s; }
+.runtime-option:hover { border-color: rgba(0,0,0,0.15); }
+.runtime-option.active { border-color: #999; color: #1a1a1a; font-weight: 500; }
+
+/* Editor cards */
+.editor-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.editor-card-title { font-family: var(--font-heading); font-size: 14px; font-weight: 600; }
+.editor-card-action { font-size: 12px; font-weight: 500; color: var(--blue); cursor: pointer; border: none; background: none; }
+.editor-card-action:hover { opacity: 0.8; }
+
+/* Arg/command rows */
+.editor-item { background: rgba(255,255,255,0.55); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+.editor-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.editor-item-name { font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
+.editor-item-remove { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 0 4px; }
+.editor-item-remove:hover { color: #999; }
+.editor-item-fields { display: flex; gap: 8px; }
+.editor-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.editor-field-sm { width: 100px; flex: none; }
+.editor-field label { font-size: 10px; font-weight: 500; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+.editor-field input, .editor-field textarea { background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08); border-radius: 6px; padding: 7px 10px; font-family: var(--font-body); font-size: 12px; }
+.editor-field .mono { font-family: var(--font-mono); }
+.cmd-input { background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); border-radius: 6px; padding: 8px 10px; font-family: var(--font-mono); font-size: 12px; width: 100%; }
+.cmd-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+/* Required/optional badge */
+.badge-required { font-size: 10px; font-weight: 600; color: var(--red); background: rgba(239,68,68,0.08); padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.badge-optional { font-size: 10px; font-weight: 600; color: #888; background: rgba(0,0,0,0.05); padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* Prompt textarea */
+.prompt-area { width: 100%; min-height: 400px; flex: 1; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; padding: 16px; background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; resize: vertical; color: var(--text); }
+.prompt-hint { font-size: 11px; color: #aaa; }
+
+/* File list / Structure */
+.file-list { display: flex; flex-direction: column; gap: 2px; }
+.file-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+.file-item:hover { background: rgba(0,0,0,0.03); }
+.file-item-name { color: var(--text); }
+.file-item-size { font-size: 11px; color: #aaa; }
+.file-item-actions { display: flex; gap: 4px; }
+.file-dropzone { border: 1.5px dashed rgba(0,0,0,0.1); border-radius: 10px; padding: 16px; text-align: center; color: #bbb; font-size: 12px; margin-top: 8px; transition: all 0.15s; }
+.file-dropzone.dragover { border-color: var(--blue); background: var(--blue-bg); }
+
+/* Agent name input for new agents */
+.agent-name-input { width: 100%; padding: 10px 14px; font-family: var(--font-mono); font-size: 14px; background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; }
+.agent-name-input:focus { outline: none; border-color: rgba(0,0,0,0.15); }
+.agent-name-error { font-size: 11px; color: var(--red); margin-top: 4px; }
