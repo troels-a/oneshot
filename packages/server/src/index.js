@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env
 
 const { RunManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
 const Scheduler = require('./lib/scheduler');
+const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
 const agentsRouter = require('./routes/agents');
@@ -19,8 +20,9 @@ const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
   const logsDir = options.logsDir || resolveLogsDir();
-  const apiKey = process.env.API_KEY;
-  const dashboardPassword = process.env.DASHBOARD_PASSWORD;
+  const apiKey = process.env.ONESHOT_API_KEY;
+  const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
+  const sessionSecret = options.sessionSecret || loadOrCreateSecret(ROOT_DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
 
@@ -34,10 +36,10 @@ function createApp(options = {}) {
 
   // Health + login — no auth
   app.use(healthRouter);
-  app.use(createAuthRouter({ apiKey, dashboardPassword }));
+  app.use(createAuthRouter({ dashboardPassword, sessionSecret }));
 
   // Auth for everything else
-  app.use(createAuthMiddleware(apiKey));
+  app.use(createAuthMiddleware(apiKey, sessionSecret));
 
   // Inject dependencies
   app.use((req, res, next) => {
@@ -64,7 +66,7 @@ function createApp(options = {}) {
 
 if (require.main === module) {
   const { app, manager, scheduler } = createApp();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.ONESHOT_API_PORT || 3000;
 
   const server = app.listen(PORT, () => {
     console.log(`oneshot server listening on port ${PORT}`);

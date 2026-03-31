@@ -122,7 +122,7 @@ oneshot run my-agent --arg_name=value
 
 # API
 curl -X POST http://localhost:3000/agents/my-agent/dispatch \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $ONESHOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"args": {"arg_name": "value"}}'
 ```
@@ -133,7 +133,7 @@ Agents can be scheduled via the API with cron expressions:
 
 ```bash
 curl -X POST http://localhost:3000/agents/my-agent/schedules \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $ONESHOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"cron": "0 9 * * 1-5", "args": {"arg_name": "value"}}'
 ```
@@ -153,7 +153,8 @@ npm test                  # Run all tests
 ## Environment
 
 Configure in `.env` (see `.env.example`):
-- `API_KEY` — Bearer token for API auth (required for server)
-- `DASHBOARD_PASSWORD` — Password for dashboard login (required for server)
-- `PORT` — Server port (default: 3000)
+- `ONESHOT_API_KEY` — Bearer token for API auth (required for server)
+- `ONESHOT_DASHBOARD_PASSWORD` — Password for dashboard login (required for server)
+- `ONESHOT_API_PORT` — Server port (default: 3000)
 - `ONESHOT_AGENTS_DIR` — Path to agents directory (default: ./agents)
+- `ONESHOT_WORKSPACE_DIR` — Base directory for resolving relative `--path` values in dispatch requests
