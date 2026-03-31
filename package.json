@@ -7,6 +7,8 @@
     "setup": "node setup.js",
     "api": "npm run dev --workspace=packages/server",
     "dashboard": "npm run dev --workspace=packages/dashboard",
+    "build:dashboard": "npm run build --workspace=packages/dashboard",
+    "update": "git checkout main && git pull && npm install",
     "start": "npm run api & npm run dashboard &",
     "test": "npm test --workspaces --if-present"
   }
