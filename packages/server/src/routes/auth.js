@@ -1,14 +1,19 @@
 const { Router } = require('express');
+const crypto = require('crypto');
+const { createSessionToken } = require('../lib/sessions');
 
-function createAuthRouter({ apiKey, dashboardPassword }) {
+function createAuthRouter({ dashboardPassword, sessionSecret }) {
   const router = Router();
 
   router.post('/auth/login', (req, res) => {
     const { password } = req.body || {};
-    if (!password || password !== dashboardPassword) {
+    const pwBuf = Buffer.from(String(password || ''));
+    const expectedBuf = Buffer.from(dashboardPassword);
+    if (pwBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(pwBuf, expectedBuf)) {
       return res.status(401).json({ error: 'Invalid password' });
     }
-    res.json({ token: apiKey });
+    const token = createSessionToken(sessionSecret);
+    res.json({ token });
   });
 
   return router;

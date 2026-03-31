@@ -5,6 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env
 
 const { RunManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
 const Scheduler = require('./lib/scheduler');
+const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
 const agentsRouter = require('./routes/agents');
@@ -21,6 +22,7 @@ function createApp(options = {}) {
   const logsDir = options.logsDir || resolveLogsDir();
   const apiKey = process.env.ONESHOT_API_KEY;
   const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
+  const sessionSecret = options.sessionSecret || loadOrCreateSecret(ROOT_DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
 
@@ -34,10 +36,10 @@ function createApp(options = {}) {
 
   // Health + login — no auth
   app.use(healthRouter);
-  app.use(createAuthRouter({ apiKey, dashboardPassword }));
+  app.use(createAuthRouter({ dashboardPassword, sessionSecret }));
 
   // Auth for everything else
-  app.use(createAuthMiddleware(apiKey));
+  app.use(createAuthMiddleware(apiKey, sessionSecret));
 
   // Inject dependencies
   app.use((req, res, next) => {
