@@ -3,7 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { RunManager, resolveAgentsDir, resolveLogsDir } = require('@oneshot/core');
+const { RunManager, resolveAgentsDir, resolveLogsDir, DATA_DIR } = require('@oneshot/core');
 const Scheduler = require('./lib/scheduler');
 const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
@@ -15,19 +15,17 @@ const statsRouter = require('./routes/stats');
 const filesRouter = require('./routes/files');
 const createAuthRouter = require('./routes/auth');
 
-const ROOT_DATA_DIR = path.join(__dirname, '..', '..', '..', '.oneshot');
-
 function createApp(options = {}) {
   const agentsDir = options.agentsDir || resolveAgentsDir();
   const logsDir = options.logsDir || resolveLogsDir();
   const apiKey = process.env.ONESHOT_API_KEY;
   const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
-  const sessionSecret = options.sessionSecret || loadOrCreateSecret(ROOT_DATA_DIR);
+  const sessionSecret = options.sessionSecret || loadOrCreateSecret(DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
 
-  const manager = new RunManager({ logsDir, agentsDir });
-  const schedulesFile = options.schedulesFile || path.join(ROOT_DATA_DIR, 'schedules.json');
+  const manager = new RunManager({ logsDir, agentsDir, dataDir: DATA_DIR });
+  const schedulesFile = options.schedulesFile || path.join(DATA_DIR, 'schedules.json');
   const scheduler = new Scheduler({ runManager: manager, schedulesFile, agentsDir });
   scheduler.loadFromDisk();
 

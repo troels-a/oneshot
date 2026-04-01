@@ -1,6 +1,5 @@
 const path = require('path');
-
-const repoRoot = path.resolve(__dirname, '..', '..', '..');
+const { REPO_ROOT } = require('./paths');
 
 function resolveWorkspaceDir() {
   let dir = process.env.ONESHOT_WORKSPACE_DIR;
@@ -8,7 +7,7 @@ function resolveWorkspaceDir() {
   if (dir.startsWith('~/') || dir === '~') {
     dir = path.join(require('os').homedir(), dir.slice(1));
   }
-  return path.resolve(repoRoot, dir);
+  return path.resolve(REPO_ROOT, dir);
 }
 
 module.exports = resolveWorkspaceDir;

@@ -1,10 +1,9 @@
 const path = require('path');
-
-const repoRoot = path.resolve(__dirname, '..', '..', '..');
+const { REPO_ROOT, DATA_DIR } = require('./paths');
 
 function resolveLogsDir() {
-  const dir = process.env.ONESHOT_LOGS_DIR || path.join(repoRoot, '.oneshot', 'logs');
-  return path.resolve(repoRoot, dir);
+  const dir = process.env.ONESHOT_LOGS_DIR || path.join(DATA_DIR, 'logs');
+  return path.resolve(REPO_ROOT, dir);
 }
 
 module.exports = resolveLogsDir;

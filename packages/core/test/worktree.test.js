@@ -7,6 +7,7 @@ const { execFileSync } = require('child_process');
 const { createWorktree, removeWorktree } = require('../src/worktree');
 
 const TMP = path.join(os.tmpdir(), 'oneshot-worktree-test');
+const DATA = path.join(TMP, 'data');
 
 function initGitRepo(dir) {
   mkdirSync(dir, { recursive: true });
@@ -30,9 +31,10 @@ describe('worktree', () => {
     const repoDir = path.join(TMP, 'repo-create');
     initGitRepo(repoDir);
 
-    const result = createWorktree(repoDir, 'run-123', 'my-agent');
+    const result = createWorktree(repoDir, 'run-123', 'my-agent', DATA);
 
     assert.ok(existsSync(result.worktreeDir));
+    assert.ok(result.worktreeDir.startsWith(DATA), 'worktree should be inside the data dir');
     assert.strictEqual(result.branch, 'oneshot/my-agent/run-123');
     assert.strictEqual(result.repoRoot, repoDir);
 
@@ -58,7 +60,7 @@ describe('worktree', () => {
     const repoDir = path.join(TMP, 'repo-remove');
     initGitRepo(repoDir);
 
-    const result = createWorktree(repoDir, 'run-789', 'cleanup-agent');
+    const result = createWorktree(repoDir, 'run-789', 'cleanup-agent', DATA);
     assert.ok(existsSync(result.worktreeDir));
 
     removeWorktree(repoDir, result.worktreeDir);

@@ -1,4 +1,8 @@
+const { REPO_ROOT, DATA_DIR } = require('./paths');
+
 module.exports = {
+  REPO_ROOT,
+  DATA_DIR,
   discoverAgents: require('./discover'),
   parseAgentMd: require('./parse-agent-md'),
   serializeAgentMd: require('./serialize-agent-md'),

@@ -1,10 +1,9 @@
 const path = require('path');
-
-const repoRoot = path.resolve(__dirname, '..', '..', '..');
+const { REPO_ROOT } = require('./paths');
 
 function resolveAgentsDir() {
-  const dir = process.env.ONESHOT_AGENTS_DIR || path.join(repoRoot, 'agents');
-  return path.resolve(repoRoot, dir);
+  const dir = process.env.ONESHOT_AGENTS_DIR || path.join(REPO_ROOT, 'agents');
+  return path.resolve(REPO_ROOT, dir);
 }
 
 module.exports = resolveAgentsDir;
