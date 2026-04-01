@@ -1083,3 +1083,140 @@ body::after {
 .agent-name-input { width: 100%; padding: 10px 14px; font-family: var(--font-mono); font-size: 14px; background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; }
 .agent-name-input:focus { outline: none; border-color: rgba(0,0,0,0.15); }
 .agent-name-error { font-size: 11px; color: var(--red); margin-top: 4px; }
+
+/* ---- Responsive: small screens ---- */
+@media (max-width: 768px) {
+  /* Root layout */
+  .app {
+    padding: 0 16px 16px;
+  }
+
+  .app-nav {
+    padding: 12px 16px;
+  }
+
+  /* Welcome section */
+  .welcome-text h1 {
+    font-size: 24px;
+  }
+
+  .welcome-text p {
+    font-size: 13px;
+  }
+
+  .welcome-actions {
+    flex-wrap: wrap;
+  }
+
+  .welcome-actions .btn,
+  .welcome-actions .pill-btn {
+    min-height: 44px;
+  }
+
+  /* Runs & schedules tables: horizontal scroll */
+  .glass-card {
+    overflow-x: auto;
+  }
+
+  .glass-table {
+    min-width: 600px;
+  }
+
+  /* Filter bar */
+  .filters {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Agent grid */
+  .agent-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-card {
+    padding: 12px;
+  }
+
+  /* Agent editor */
+  .agent-editor-layout {
+    flex-direction: column;
+  }
+
+  .agent-editor-left {
+    width: 100%;
+  }
+
+  .agent-editor-right {
+    width: 100%;
+  }
+
+  .prompt-area {
+    min-height: 250px;
+  }
+
+  /* Run detail */
+  .run-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .run-result {
+    overflow-x: auto;
+  }
+
+  .timeline {
+    max-height: 400px;
+  }
+
+  .run-info {
+    padding: 14px;
+  }
+
+  .glass-card {
+    padding: 16px;
+  }
+
+  /* Touch targets */
+  .btn {
+    min-height: 44px;
+  }
+
+  .badge,
+  .btn-kill,
+  .btn-clear {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-pill {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  /* Typography */
+  .metric-card-value .value {
+    font-size: 26px;
+  }
+
+  .section-title {
+    font-size: 15px;
+  }
+
+  .run-info h2 {
+    font-size: 16px;
+  }
+
+  /* Overview layout: stack on mobile */
+  .overview-content {
+    flex-direction: column;
+  }
+
+  .metric-cards {
+    flex-wrap: wrap;
+  }
+
+  /* Login: minor padding tweak */
+  .login-card {
+    padding: 28px 20px;
+  }
+}
