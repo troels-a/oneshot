@@ -11,9 +11,10 @@ const { createWorktree, removeWorktree } = require('./worktree');
 const MAX_COMPLETED_RUNS = 1000;
 
 class RunManager {
-  constructor({ logsDir, agentsDir }) {
+  constructor({ logsDir, agentsDir, dataDir }) {
     this.logsDir = logsDir;
     this.agentsDir = agentsDir;
+    this.dataDir = dataDir || require('./paths').DATA_DIR;
     this.runs = new Map();
     this.processes = new Map();
   }
@@ -53,7 +54,7 @@ class RunManager {
     let spawnCwd = cwd;
     if (config.worktree) {
       try {
-        worktreeInfo = createWorktree(cwd, id, agentName);
+        worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir);
         spawnCwd = worktreeInfo.worktreeDir;
       } catch (err) {
         stdoutStream.destroy();

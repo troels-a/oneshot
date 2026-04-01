@@ -1,8 +1,9 @@
 const { execFileSync } = require('child_process');
 const { rmSync } = require('fs');
 const path = require('path');
+const { DATA_DIR } = require('./paths');
 
-function createWorktree(cwd, runId, agentName) {
+function createWorktree(cwd, runId, agentName, dataDir) {
   try {
     execFileSync('git', ['-C', cwd, 'rev-parse', '--git-dir'], { stdio: 'pipe' });
   } catch {
@@ -12,7 +13,7 @@ function createWorktree(cwd, runId, agentName) {
   const repoRoot = execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { stdio: 'pipe' })
     .toString().trim();
 
-  const worktreeDir = path.join(repoRoot, '.oneshot', 'worktrees', runId);
+  const worktreeDir = path.join(dataDir || DATA_DIR, 'worktrees', runId);
   const branch = `oneshot/${agentName}/${runId}`;
 
   execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-b', branch, worktreeDir, 'HEAD'], { stdio: 'pipe' });
