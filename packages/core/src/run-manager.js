@@ -54,7 +54,7 @@ class RunManager {
     let spawnCwd = cwd;
     if (config.worktree) {
       try {
-        worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir);
+        worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir, providedArgs.branch);
         spawnCwd = worktreeInfo.worktreeDir;
       } catch (err) {
         stdoutStream.destroy();
