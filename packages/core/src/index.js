@@ -20,4 +20,5 @@ module.exports = {
   createRunLogger: require('./run-logger'),
   createWorktree: require('./worktree').createWorktree,
   removeWorktree: require('./worktree').removeWorktree,
+  Scheduler: require('./scheduler'),
 };
