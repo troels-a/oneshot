@@ -68,6 +68,12 @@ export async function fetchSchedules(agent) {
   return data.schedules;
 }
 
+export async function fetchAllSchedules() {
+  const res = await request('/schedules');
+  const data = await res.json();
+  return data.schedules;
+}
+
 export async function clearRuns() {
   const res = await request('/runs', { method: 'DELETE' });
   return res.json();
