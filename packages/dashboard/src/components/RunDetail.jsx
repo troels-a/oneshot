@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchRun, fetchRunLogs, fetchLogContent } from '../api';
 
 const PAGE_SIZE = 50;
+const LOG_LABELS = { 'stdout.log': 'Logs', 'stderr.log': 'Errors' };
 
 export default function RunDetail({ runId, onBack }) {
   const [run, setRun] = useState(null);
@@ -40,7 +41,7 @@ export default function RunDetail({ runId, onBack }) {
         setLogFiles(logsData.files || []);
 
         if (logsData.files?.length && !selectedLog) {
-          const first = logsData.files[0].name;
+          const first = logsData.files.find(f => f.name === 'stdout.log')?.name || logsData.files[0].name;
           setSelectedLog(first);
           offsetRef.current = 0;
           await loadPage(first, 0);
@@ -135,7 +136,7 @@ export default function RunDetail({ runId, onBack }) {
                     className={`tab ${selectedLog === f.name ? 'tab-active' : ''}`}
                     onClick={() => selectLog(f.name)}
                   >
-                    {f.name} <span className="log-size">({formatSize(f.size)})</span>
+                    {LOG_LABELS[f.name] || f.name} <span className="log-size">({formatSize(f.size)})</span>
                   </button>
                 ))}
               </div>
@@ -206,7 +207,7 @@ function parseLines(lines) {
     if (Array.isArray(entry)) entries.push(...entry);
     else entries.push(entry);
   }
-  return entries;
+  return entries.reverse();
 }
 
 function parseEntry(obj) {
