@@ -1095,6 +1095,13 @@ body::after {
 
   .app-nav {
     padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .app-nav-pills {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Welcome section */
@@ -1110,13 +1117,13 @@ body::after {
     flex-wrap: wrap;
   }
 
-  .welcome-actions .btn,
-  .welcome-actions .pill-btn {
+  .welcome-actions .btn {
     min-height: 44px;
   }
 
-  /* Runs & schedules tables: horizontal scroll */
+  /* Glass cards: reduced padding + horizontal scroll for tables */
   .glass-card {
+    padding: 16px;
     overflow-x: auto;
   }
 
@@ -1173,10 +1180,6 @@ body::after {
     padding: 14px;
   }
 
-  .glass-card {
-    padding: 16px;
-  }
-
   /* Touch targets */
   .btn {
     min-height: 44px;
@@ -1186,8 +1189,14 @@ body::after {
   .btn-kill,
   .btn-clear {
     min-height: 44px;
-    display: inline-flex;
-    align-items: center;
+  }
+
+  .filters select {
+    min-height: 44px;
+  }
+
+  .pagination button {
+    min-height: 44px;
   }
 
   .nav-pill {
