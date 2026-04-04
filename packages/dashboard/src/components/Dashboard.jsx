@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchRuns, fetchSchedules, clearRuns } from '../api';
+import { fetchAgents, fetchRuns, fetchAllSchedules, clearRuns } from '../api';
 import RunCard from './RunCard';
 import ScheduleCard from './ScheduleCard';
 
@@ -25,14 +25,8 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       setRuns(runList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
 
       if (tab === 'schedules') {
-        const results = await Promise.all(
-          agentList.map((agent) =>
-            fetchSchedules(agent.name)
-              .then((s) => s.map((sch) => ({ ...sch, agent: agent.name })))
-              .catch(() => [])
-          )
-        );
-        setSchedules(results.flat());
+        const allSchedules = await fetchAllSchedules();
+        setSchedules(allSchedules);
       }
     } catch (err) {
       console.error('Failed to load data:', err);

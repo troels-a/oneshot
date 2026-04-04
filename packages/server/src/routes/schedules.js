@@ -16,6 +16,11 @@ function validateScheduleId(req, res, next) {
   next();
 }
 
+router.get('/schedules', (req, res) => {
+  const all = Array.from(req.scheduler.schedules.values());
+  res.json({ schedules: all });
+});
+
 router.post('/agents/:agent/schedules', validateParams, async (req, res, next) => {
   try {
     const { agent } = req.params;
