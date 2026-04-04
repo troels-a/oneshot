@@ -30,6 +30,7 @@ function parseAgentMd(filePath) {
 
   const commands = Array.isArray(frontmatter.commands) ? frontmatter.commands : [];
   const worktree = frontmatter.worktree === true;
+  const multi_instance = frontmatter.multi_instance === true;
 
   return {
     runtime,
@@ -37,6 +38,7 @@ function parseAgentMd(filePath) {
     commands,
     body,
     worktree,
+    multi_instance,
   };
 }
 

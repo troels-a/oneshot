@@ -29,6 +29,7 @@ router.get('/agents', (req, res) => {
     runtime: a.config.runtime,
     args: a.config.args,
     worktree: a.config.worktree,
+    multi_instance: a.config.multi_instance,
   }));
   res.json({ agents });
 });
@@ -44,9 +45,14 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
       return res.status(400).json({ error: errors.join('; ') });
     }
 
-    const existing = manager.getRunningRun(agent);
-    if (existing) {
-      return res.status(409).json({ error: 'Agent already running', runId: existing.id });
+    const agentMdPath = path.join(req.agentsDir, req.params.agent, 'agent.md');
+    const config = parseAgentMd(agentMdPath);
+
+    if (!config.multi_instance) {
+      const existing = manager.getRunningRun(agent);
+      if (existing) {
+        return res.status(409).json({ error: 'Agent already running', runId: existing.id });
+      }
     }
 
     const { run } = await manager.dispatchRun(agent, body);
@@ -78,11 +84,12 @@ router.get('/agents/:agent', validateParams, (req, res) => {
     commands: config.commands,
     body: config.body,
     worktree: config.worktree,
+    multi_instance: config.multi_instance,
   });
 });
 
 router.post('/agents', (req, res) => {
-  const { name, runtime, args, commands, body, worktree } = req.body;
+  const { name, runtime, args, commands, body, worktree, multi_instance } = req.body;
 
   if (!name || !VALID_NAME.test(name)) {
     return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
@@ -96,11 +103,11 @@ router.post('/agents', (req, res) => {
     return res.status(409).json({ error: 'Agent already exists' });
   }
 
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, multi_instance: !!multi_instance });
   mkdirSync(agentDir, { recursive: true });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, multi_instance: !!multi_instance });
 });
 
 router.put('/agents/:agent', validateParams, (req, res) => {
@@ -111,14 +118,14 @@ router.put('/agents/:agent', validateParams, (req, res) => {
     return res.status(404).json({ error: 'Agent not found' });
   }
 
-  const { runtime, args, commands, body, worktree } = req.body;
+  const { runtime, args, commands, body, worktree, multi_instance } = req.body;
   if (!runtime || !VALID_RUNTIMES.has(runtime)) {
     return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
   }
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, multi_instance: !!multi_instance });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, multi_instance: !!multi_instance });
 });
 
 router.delete('/agents/:agent', validateParams, (req, res) => {

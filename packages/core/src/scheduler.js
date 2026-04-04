@@ -1,6 +1,8 @@
 const { randomUUID } = require('crypto');
+const path = require('path');
 const { readFileSync, writeFileSync } = require('fs');
 const cron = require('node-cron');
+const parseAgentMd = require('./parse-agent-md');
 const cronParser = require('cron-parser');
 const parseCronExpression = (cronParser.CronExpressionParser || cronParser.default || cronParser).parse.bind(
   cronParser.CronExpressionParser || cronParser.default || cronParser
@@ -104,21 +106,32 @@ class Scheduler {
   }
 
   async _onTick(schedule) {
-    const running = this.runManager.getRunningRun(schedule.agent);
+    const agentMdPath = path.join(this.agentsDir, schedule.agent, 'agent.md');
+    let config;
+    try {
+      config = parseAgentMd(agentMdPath);
+    } catch {
+      config = {};
+    }
 
     schedule.lastRunAt = new Date().toISOString();
     schedule.nextRunAt = this._computeNextRun(schedule.cron);
 
-    if (running) {
-      schedule.lastRunResult = 'skipped';
-    } else {
-      try {
-        await this.runManager.dispatchRun(schedule.agent, schedule.options);
-        schedule.lastRunResult = 'dispatched';
-      } catch (err) {
-        console.error(`Schedule ${schedule.id} dispatch error:`, err.message);
-        schedule.lastRunResult = 'error';
+    if (!config.multi_instance) {
+      const running = this.runManager.getRunningRun(schedule.agent);
+      if (running) {
+        schedule.lastRunResult = 'skipped';
+        this.saveToDisk();
+        return;
       }
+    }
+
+    try {
+      await this.runManager.dispatchRun(schedule.agent, schedule.options);
+      schedule.lastRunResult = 'dispatched';
+    } catch (err) {
+      console.error(`Schedule ${schedule.id} dispatch error:`, err.message);
+      schedule.lastRunResult = 'error';
     }
 
     this.saveToDisk();

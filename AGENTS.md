@@ -138,7 +138,7 @@ curl -X POST http://localhost:3000/agents/my-agent/schedules \
   -d '{"cron": "0 9 * * 1-5", "args": {"arg_name": "value"}}'
 ```
 
-Only one instance of an agent runs at a time. Scheduled runs are skipped if the previous run is still executing.
+Only one instance of an agent runs at a time. Scheduled runs are skipped if the previous run is still executing. To allow concurrent runs, set `multi_instance: true` in the agent's frontmatter.
 
 ## Development
 
