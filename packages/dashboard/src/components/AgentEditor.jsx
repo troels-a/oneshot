@@ -17,11 +17,21 @@ export default function AgentEditor({ agentName, onBack }) {
   const [args, setArgs] = useState([]);
   const [commands, setCommands] = useState([]);
   const [body, setBody] = useState('');
+  const [worktree, setWorktree] = useState(false);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+
+  function hydrateAgent(agent, filesData) {
+    setRuntime(agent.runtime);
+    setArgs(agent.args || []);
+    setCommands(agent.commands || []);
+    setBody(agent.body || '');
+    setWorktree(agent.worktree || false);
+    setFiles(filesData.files || []);
+  }
 
   // Load existing agent
   useEffect(() => {
@@ -29,11 +39,7 @@ export default function AgentEditor({ agentName, onBack }) {
       Promise.all([fetchAgent(agentName), fetchAgentFiles(agentName)])
         .then(([agent, filesData]) => {
           setName(agentName);
-          setRuntime(agent.runtime);
-          setArgs(agent.args || []);
-          setCommands(agent.commands || []);
-          setBody(agent.body || '');
-          setFiles(filesData.files || []);
+          hydrateAgent(agent, filesData);
         })
         .catch(err => setError(err.message))
         .finally(() => setLoading(false));
@@ -54,7 +60,7 @@ export default function AgentEditor({ agentName, onBack }) {
   async function handleSave() {
     setSaving(true); setError('');
     try {
-      const data = { runtime, args, commands, body };
+      const data = { runtime, args, commands, body, worktree };
       if (isNew) {
         await createAgent({ name, ...data });
       } else {
@@ -71,11 +77,7 @@ export default function AgentEditor({ agentName, onBack }) {
     setLoading(true);
     Promise.all([fetchAgent(agentName), fetchAgentFiles(agentName)])
       .then(([agent, filesData]) => {
-        setRuntime(agent.runtime);
-        setArgs(agent.args || []);
-        setCommands(agent.commands || []);
-        setBody(agent.body || '');
-        setFiles(filesData.files || []);
+        hydrateAgent(agent, filesData);
         setDirty(false);
       })
       .catch(err => setError(err.message))
@@ -86,6 +88,13 @@ export default function AgentEditor({ agentName, onBack }) {
     if (!window.confirm(`Delete agent "${agentName}"? This cannot be undone.`)) return;
     try { await deleteAgent(agentName); onBack(); }
     catch (err) { setError(err.message); }
+  }
+
+  function moveItem(list, setter, from, to) {
+    const next = [...list];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    change(setter)(next);
   }
 
   // Arg helpers
@@ -183,6 +192,16 @@ export default function AgentEditor({ agentName, onBack }) {
 
           <div className="glass-card">
             <div className="editor-card-header">
+              <span className="editor-card-title">Worktree</span>
+            </div>
+            <label style={{display:'flex', alignItems:'center', gap: 8, cursor:'pointer', fontSize: 13}}>
+              <input type="checkbox" checked={worktree} onChange={e => { setWorktree(e.target.checked); setDirty(true); }} />
+              Run in an isolated git worktree
+            </label>
+          </div>
+
+          <div className="glass-card">
+            <div className="editor-card-header">
               <span className="editor-card-title">Arguments</span>
               <button className="editor-card-action" onClick={addArg}>+ Add</button>
             </div>
@@ -195,7 +214,11 @@ export default function AgentEditor({ agentName, onBack }) {
                       {arg.required ? 'required' : 'optional'}
                     </span>
                   </div>
-                  <button className="editor-item-remove" onClick={() => removeArg(i)}>&#10005;</button>
+                  <div style={{display:'flex', alignItems:'center', gap: 4}}>
+                    {i > 0 && <button className="editor-item-move" onClick={() => moveItem(args, setArgs, i, i - 1)}>&#9650;</button>}
+                    {i < args.length - 1 && <button className="editor-item-move" onClick={() => moveItem(args, setArgs, i, i + 1)}>&#9660;</button>}
+                    <button className="editor-item-remove" onClick={() => removeArg(i)}>&#10005;</button>
+                  </div>
                 </div>
                 <div className="editor-item-fields">
                   <div className="editor-field">
@@ -221,7 +244,11 @@ export default function AgentEditor({ agentName, onBack }) {
               <div key={i} className="editor-item">
                 <div className="editor-item-header">
                   <input className="editor-item-name mono" placeholder="cmd_name" value={cmd.name} onChange={e => updateCommand(i, 'name', e.target.value)} style={{border:'none',background:'none',padding:0,fontFamily:'var(--font-mono)',fontSize:13,fontWeight:500}} />
-                  <button className="editor-item-remove" onClick={() => removeCommand(i)}>&#10005;</button>
+                  <div style={{display:'flex', alignItems:'center', gap: 4}}>
+                    {i > 0 && <button className="editor-item-move" onClick={() => moveItem(commands, setCommands, i, i - 1)}>&#9650;</button>}
+                    {i < commands.length - 1 && <button className="editor-item-move" onClick={() => moveItem(commands, setCommands, i, i + 1)}>&#9660;</button>}
+                    <button className="editor-item-remove" onClick={() => removeCommand(i)}>&#10005;</button>
+                  </div>
                 </div>
                 <input className="cmd-input" value={cmd.run || ''} onChange={e => updateCommand(i, 'run', e.target.value)} placeholder="shell command" />
                 {cmd.name && <div className="cmd-hint">Available as {'{{ commands.' + cmd.name + ' }}'} in prompt</div>}
