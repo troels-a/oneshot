@@ -1050,6 +1050,8 @@ body::after {
 .editor-item { background: rgba(255,255,255,0.55); border: 1px solid rgba(0,0,0,0.06); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
 .editor-item-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .editor-item-name { font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
+.editor-item-move { background: none; border: none; color: #555; cursor: pointer; font-size: 10px; padding: 0 2px; line-height: 1; }
+.editor-item-move:hover { color: #aaa; }
 .editor-item-remove { background: none; border: none; color: #ccc; cursor: pointer; font-size: 14px; padding: 0 4px; }
 .editor-item-remove:hover { color: #999; }
 .editor-item-fields { display: flex; gap: 8px; }

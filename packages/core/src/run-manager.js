@@ -53,8 +53,11 @@ class RunManager {
     let worktreeInfo = null;
     let spawnCwd = cwd;
     if (config.worktree) {
+      if (!options.path) {
+        throw new Error('worktree agents require a path option pointing to the target repository');
+      }
       try {
-        worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir);
+        worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir, providedArgs.branch);
         spawnCwd = worktreeInfo.worktreeDir;
       } catch (err) {
         stdoutStream.destroy();

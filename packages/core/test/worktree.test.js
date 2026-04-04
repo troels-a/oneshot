@@ -2,19 +2,30 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert');
 const os = require('os');
 const path = require('path');
-const { mkdirSync, rmSync, existsSync } = require('fs');
+const { mkdirSync, rmSync, existsSync, writeFileSync } = require('fs');
 const { execFileSync } = require('child_process');
 const { createWorktree, removeWorktree } = require('../src/worktree');
 
 const TMP = path.join(os.tmpdir(), 'oneshot-worktree-test');
 const DATA = path.join(TMP, 'data');
 
-function initGitRepo(dir) {
+function initBareOrigin(dir) {
   mkdirSync(dir, { recursive: true });
-  execFileSync('git', ['init', dir], { stdio: 'pipe' });
+  execFileSync('git', ['init', '--bare', '--initial-branch=main', dir], { stdio: 'pipe' });
+}
+
+function initGitRepo(dir, originDir) {
+  mkdirSync(dir, { recursive: true });
+  execFileSync('git', ['init', '--initial-branch=main', dir], { stdio: 'pipe' });
   execFileSync('git', ['-C', dir, 'config', 'user.email', 'test@test.com'], { stdio: 'pipe' });
   execFileSync('git', ['-C', dir, 'config', 'user.name', 'Test'], { stdio: 'pipe' });
+  // Disable global hooks so tests aren't blocked by pre-push hooks
+  execFileSync('git', ['-C', dir, 'config', 'core.hooksPath', '/dev/null'], { stdio: 'pipe' });
   execFileSync('git', ['-C', dir, 'commit', '--allow-empty', '-m', 'init'], { stdio: 'pipe' });
+  if (originDir) {
+    execFileSync('git', ['-C', dir, 'remote', 'add', 'origin', originDir], { stdio: 'pipe' });
+    execFileSync('git', ['-C', dir, 'push', 'origin', 'main'], { stdio: 'pipe' });
+  }
 }
 
 describe('worktree', () => {
@@ -28,8 +39,10 @@ describe('worktree', () => {
   });
 
   it('creates worktree directory and branch', () => {
+    const originDir = path.join(TMP, 'origin-create');
     const repoDir = path.join(TMP, 'repo-create');
-    initGitRepo(repoDir);
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
 
     const result = createWorktree(repoDir, 'run-123', 'my-agent', DATA);
 
@@ -57,13 +70,102 @@ describe('worktree', () => {
   });
 
   it('removes worktree directory on cleanup', () => {
+    const originDir = path.join(TMP, 'origin-remove');
     const repoDir = path.join(TMP, 'repo-remove');
-    initGitRepo(repoDir);
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
 
     const result = createWorktree(repoDir, 'run-789', 'cleanup-agent', DATA);
     assert.ok(existsSync(result.worktreeDir));
 
     removeWorktree(repoDir, result.worktreeDir);
     assert.ok(!existsSync(result.worktreeDir));
+  });
+
+  it('creates worktree on existing remote branch', () => {
+    const originDir = path.join(TMP, 'origin-existing');
+    const repoDir = path.join(TMP, 'repo-existing');
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
+
+    // Create a branch with a commit and push it
+    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'feature/test'], { stdio: 'pipe' });
+    writeFileSync(path.join(repoDir, 'feature.txt'), 'hello');
+    execFileSync('git', ['-C', repoDir, 'add', 'feature.txt'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'feature commit'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'push', 'origin', 'feature/test'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'checkout', 'main'], { stdio: 'pipe' });
+
+    const result = createWorktree(repoDir, 'run-branch-1', 'agent', DATA, 'feature/test');
+
+    assert.strictEqual(result.branch, 'feature/test');
+    assert.ok(existsSync(path.join(result.worktreeDir, 'feature.txt')), 'worktree should have the branch content');
+
+    removeWorktree(repoDir, result.worktreeDir);
+  });
+
+  it('creates worktree with new branch from main when branch does not exist', () => {
+    const originDir = path.join(TMP, 'origin-new');
+    const repoDir = path.join(TMP, 'repo-new');
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
+
+    const result = createWorktree(repoDir, 'run-branch-2', 'agent', DATA, 'feature/new');
+
+    assert.strictEqual(result.branch, 'feature/new');
+    assert.ok(existsSync(result.worktreeDir));
+
+    // Verify branch exists
+    const branches = execFileSync('git', ['-C', repoDir, 'branch'], { stdio: 'pipe' }).toString();
+    assert.ok(branches.includes('feature/new'));
+
+    removeWorktree(repoDir, result.worktreeDir);
+  });
+
+  it('does not change the parent repo checked-out branch', () => {
+    const originDir = path.join(TMP, 'origin-no-clobber');
+    const repoDir = path.join(TMP, 'repo-no-clobber');
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
+
+    // Switch to a feature branch in the parent repo
+    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'my-feature'], { stdio: 'pipe' });
+    writeFileSync(path.join(repoDir, 'wip.txt'), 'work in progress');
+    execFileSync('git', ['-C', repoDir, 'add', 'wip.txt'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'wip'], { stdio: 'pipe' });
+
+    const result = createWorktree(repoDir, 'run-no-clobber', 'agent', DATA);
+
+    // Parent repo should still be on my-feature
+    const currentBranch = execFileSync('git', ['-C', repoDir, 'branch', '--show-current'], { stdio: 'pipe' }).toString().trim();
+    assert.strictEqual(currentBranch, 'my-feature', 'parent repo branch should not change');
+    assert.ok(existsSync(path.join(repoDir, 'wip.txt')), 'parent working tree should be untouched');
+
+    removeWorktree(repoDir, result.worktreeDir);
+  });
+
+  it('pulls latest main before creating worktree', () => {
+    const originDir = path.join(TMP, 'origin-pull');
+    const repoDir = path.join(TMP, 'repo-pull');
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
+
+    // Simulate a new commit on origin by cloning, committing, and pushing
+    const otherClone = path.join(TMP, 'other-clone');
+    execFileSync('git', ['clone', originDir, otherClone], { stdio: 'pipe' });
+    execFileSync('git', ['-C', otherClone, 'config', 'user.email', 'test@test.com'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', otherClone, 'config', 'user.name', 'Test'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', otherClone, 'config', 'core.hooksPath', '/dev/null'], { stdio: 'pipe' });
+    writeFileSync(path.join(otherClone, 'new.txt'), 'from origin');
+    execFileSync('git', ['-C', otherClone, 'add', 'new.txt'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', otherClone, 'commit', '-m', 'origin commit'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', otherClone, 'push', 'origin', 'main'], { stdio: 'pipe' });
+
+    // repoDir is now behind origin — createWorktree should pull first
+    const result = createWorktree(repoDir, 'run-pull', 'agent', DATA);
+
+    assert.ok(existsSync(path.join(result.worktreeDir, 'new.txt')), 'worktree should have the latest origin/main content');
+
+    removeWorktree(repoDir, result.worktreeDir);
   });
 });
