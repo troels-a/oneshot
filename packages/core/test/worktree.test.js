@@ -122,6 +122,28 @@ describe('worktree', () => {
     removeWorktree(repoDir, result.worktreeDir);
   });
 
+  it('does not change the parent repo checked-out branch', () => {
+    const originDir = path.join(TMP, 'origin-no-clobber');
+    const repoDir = path.join(TMP, 'repo-no-clobber');
+    initBareOrigin(originDir);
+    initGitRepo(repoDir, originDir);
+
+    // Switch to a feature branch in the parent repo
+    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'my-feature'], { stdio: 'pipe' });
+    writeFileSync(path.join(repoDir, 'wip.txt'), 'work in progress');
+    execFileSync('git', ['-C', repoDir, 'add', 'wip.txt'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'wip'], { stdio: 'pipe' });
+
+    const result = createWorktree(repoDir, 'run-no-clobber', 'agent', DATA);
+
+    // Parent repo should still be on my-feature
+    const currentBranch = execFileSync('git', ['-C', repoDir, 'branch', '--show-current'], { stdio: 'pipe' }).toString().trim();
+    assert.strictEqual(currentBranch, 'my-feature', 'parent repo branch should not change');
+    assert.ok(existsSync(path.join(repoDir, 'wip.txt')), 'parent working tree should be untouched');
+
+    removeWorktree(repoDir, result.worktreeDir);
+  });
+
   it('pulls latest main before creating worktree', () => {
     const originDir = path.join(TMP, 'origin-pull');
     const repoDir = path.join(TMP, 'repo-pull');
