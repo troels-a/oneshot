@@ -18,6 +18,7 @@ export default function AgentEditor({ agentName, onBack }) {
   const [commands, setCommands] = useState([]);
   const [body, setBody] = useState('');
   const [worktree, setWorktree] = useState(false);
+  const [multiInstance, setMultiInstance] = useState(false);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -30,6 +31,7 @@ export default function AgentEditor({ agentName, onBack }) {
     setCommands(agent.commands || []);
     setBody(agent.body || '');
     setWorktree(agent.worktree || false);
+    setMultiInstance(agent.multi_instance || false);
     setFiles(filesData.files || []);
   }
 
@@ -60,7 +62,7 @@ export default function AgentEditor({ agentName, onBack }) {
   async function handleSave() {
     setSaving(true); setError('');
     try {
-      const data = { runtime, args, commands, body, worktree };
+      const data = { runtime, args, commands, body, worktree, multi_instance: multiInstance };
       if (isNew) {
         await createAgent({ name, ...data });
       } else {
@@ -192,11 +194,15 @@ export default function AgentEditor({ agentName, onBack }) {
 
           <div className="glass-card">
             <div className="editor-card-header">
-              <span className="editor-card-title">Worktree</span>
+              <span className="editor-card-title">Execution</span>
             </div>
             <label style={{display:'flex', alignItems:'center', gap: 8, cursor:'pointer', fontSize: 13}}>
               <input type="checkbox" checked={worktree} onChange={e => { setWorktree(e.target.checked); setDirty(true); }} />
               Run in an isolated git worktree
+            </label>
+            <label style={{display:'flex', alignItems:'center', gap: 8, cursor:'pointer', fontSize: 13, marginTop: 8}}>
+              <input type="checkbox" checked={multiInstance} onChange={e => { setMultiInstance(e.target.checked); setDirty(true); }} />
+              Allow concurrent instances
             </label>
           </div>
 
