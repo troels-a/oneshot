@@ -1,57 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchRuns, fetchSchedules, stopRun, clearRuns } from '../api';
+import { fetchAgents, fetchRuns, fetchSchedules, clearRuns } from '../api';
+import RunCard from './RunCard';
+import ScheduleCard from './ScheduleCard';
 
 const REFRESH_INTERVAL = 5000;
 const PAGE_SIZE = 25;
-
-function timeAgo(iso) {
-  if (!iso) return '-';
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function statusBadge(status) {
-  const icons = {
-    running: (
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <circle cx="6" cy="6" r="4" stroke="#8AADC0" strokeWidth="1.5" fill="none"/>
-      </svg>
-    ),
-    completed: (
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <path d="M3 6.5L5 8.5L9 3.5" stroke="#7DAF8A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    failed: (
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <path d="M3.5 3.5L8.5 8.5M8.5 3.5L3.5 8.5" stroke="#C08080" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    pending: (
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <circle cx="6" cy="6" r="4" stroke="#C0A878" strokeWidth="1.5" fill="none"/>
-        <path d="M6 4V6.5L7.5 7.5" stroke="#C0A878" strokeWidth="1.2" strokeLinecap="round"/>
-      </svg>
-    ),
-  };
-  const colors = {
-    running: '#8AADC0',
-    completed: '#7DAF8A',
-    failed: '#C08080',
-    pending: '#C0A878',
-  };
-  return (
-    <span className="status-indicator">
-      {icons[status]}
-      <span style={{color: colors[status] || '#888'}}>{status}</span>
-    </span>
-  );
-}
 
 export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [agents, setAgents] = useState([]);
@@ -117,15 +70,9 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   return (
     <div>
       {tab === 'runs' && (
-        <div className="glass-card">
-          <div className="section-header" style={{ marginBottom: 16 }}>
-            <span className="section-title">Runs</span>
+        <div>
+          <div className="filters" style={{ marginBottom: 16 }}>
             <span className="section-badge">{runs.length} runs</span>
-            {hasClearable && (
-              <button className="btn-clear" onClick={handleClear}>Clear</button>
-            )}
-          </div>
-          <div className="filters">
             <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}>
               <option value="">All statuses</option>
               <option value="running">Running</option>
@@ -139,45 +86,25 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
                 <option key={a.name} value={a.name}>{a.name}</option>
               ))}
             </select>
+            {hasClearable && (
+              <button className="btn btn-sm btn-glass" onClick={handleClear}>Clear</button>
+            )}
           </div>
           {runs.length === 0 ? (
             <p className="empty">No runs found</p>
           ) : (
             <>
-              <table className="glass-table">
-                <thead>
-                  <tr>
-                    <th>Agent</th>
-                    <th>Status</th>
-                    <th>Started</th>
-                    <th>ID</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedRuns.map((run) => (
-                    <tr key={run.id} className="clickable" onClick={() => onSelectRun(run.id)}>
-                      <td style={{ fontWeight: 500 }}>{run.agentName}</td>
-                      <td>{statusBadge(run.status)}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{timeAgo(run.startedAt)}</td>
-                      <td className="mono">{run.id.slice(0, 8)}</td>
-                      <td>
-                        {run.status === 'running' && (
-                          <button
-                            className="btn-kill"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              stopRun(run.id).then(loadData).catch(console.error);
-                            }}
-                          >
-                            Kill
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="run-card-list">
+                {pagedRuns.map((run) => (
+                  <div key={run.id} className={`run-card-wrapper status-${run.status}`}>
+                    <RunCard
+                      run={run}
+                      onClick={() => onSelectRun(run.id)}
+                      onRefresh={loadData}
+                    />
+                  </div>
+                ))}
+              </div>
               {totalPages > 1 && (
                 <div className="pagination">
                   <button disabled={clampedPage === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
@@ -222,38 +149,20 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       )}
 
       {tab === 'schedules' && (
-        <div className="glass-card">
-          <div className="section-header" style={{ marginBottom: 16 }}>
-            <span className="section-title">Schedules</span>
-            <span className="section-badge">{schedules.length} total</span>
+        <div>
+          <div className="filters" style={{ marginBottom: 16 }}>
+            <span className="section-badge">{schedules.length} schedules</span>
           </div>
           {schedules.length === 0 ? (
             <p className="empty">No schedules found</p>
           ) : (
-            <table className="glass-table">
-              <thead>
-                <tr>
-                  <th>Agent</th>
-                  <th>Cron</th>
-                  <th>Enabled</th>
-                  <th>Last Run</th>
-                  <th>Next Run</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedules.map((s) => (
-                  <tr key={s.id}>
-                    <td style={{ fontWeight: 500 }}>{s.agent}</td>
-                    <td className="mono">{s.cron}</td>
-                    <td>{s.enabled ? 'Yes' : 'No'}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{timeAgo(s.lastRunAt)}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{s.nextRunAt ? new Date(s.nextRunAt).toLocaleString() : '-'}</td>
-                    <td>{s.lastRunResult || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="run-card-list">
+              {schedules.map((s) => (
+                <div key={s.id} className={`run-card-wrapper ${s.enabled ? 'status-completed' : ''}`}>
+                  <ScheduleCard schedule={s} />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

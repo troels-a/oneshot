@@ -3,8 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { RunManager, resolveAgentsDir, resolveLogsDir, DATA_DIR } = require('@oneshot/core');
-const Scheduler = require('./lib/scheduler');
+const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR } = require('@oneshot/core');
 const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
