@@ -1,6 +1,6 @@
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
-const { existsSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync } = require('fs');
+const { existsSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync, mkdirSync } = require('fs');
 const { rm } = require('fs/promises');
 const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
@@ -90,9 +90,22 @@ class RunManager {
 
     const { cmd, args } = command;
 
+    const spawnDir = path.join(logDir, 'spawns');
+    mkdirSync(spawnDir, { recursive: true });
+
+    const runEnv = {
+      ...process.env,
+      ONESHOT_SPAWN_DIR: spawnDir,
+      ONESHOT_RUN_ID: id,
+      ONESHOT_AGENT: agentName,
+    };
+    if (options.path) runEnv.ONESHOT_PATH = options.path;
+    if (worktreeInfo) runEnv.ONESHOT_BRANCH = worktreeInfo.branch;
+
     const child = spawn(cmd, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
       cwd: spawnCwd,
+      env: runEnv,
     });
 
     child.stdout.pipe(stdoutStream);
@@ -127,12 +140,19 @@ class RunManager {
             run.result = null;
             run.resultMeta = null;
           }
+
           command.cleanup?.();
           if (run.worktree && run._worktreeRepoRoot) {
             try { removeWorktree(run._worktreeRepoRoot, run.worktree.dir); } catch {}
           }
           this._persistRun(run);
           this._evictOldRuns();
+
+          // Process spawn requests after cleanup (worktree/branch freed)
+          if (run.status === 'completed') {
+            this._processSpawns(run, options);
+          }
+
           resolve({ exitCode: code, signal: signal || null });
         };
 
@@ -221,6 +241,42 @@ class RunManager {
         } catch {}
       }
       this._persistRun(run);
+    }
+  }
+
+  _processSpawns(parentRun, parentOptions) {
+    const spawnDir = path.join(parentRun.logDir, 'spawns');
+    let files;
+    try {
+      files = readdirSync(spawnDir).filter(f => f.endsWith('.json'));
+    } catch {
+      return;
+    }
+    if (!files.length) return;
+
+    const spawned = [];
+    for (const file of files) {
+      try {
+        const req = JSON.parse(readFileSync(path.join(spawnDir, file), 'utf8'));
+        if (!req.agent) continue;
+        const opts = {
+          args: req.args || {},
+          path: req.path,
+          source: 'spawn',
+        };
+        if (req.timeout) opts.timeout = req.timeout;
+        this.dispatchRun(req.agent, opts)
+          .then(({ run: spawnedRun }) => {
+            spawnedRun.spawnedBy = parentRun.id;
+            this._persistRun(spawnedRun);
+          })
+          .catch(() => {});
+        spawned.push({ agent: req.agent, file });
+      } catch {}
+    }
+    if (spawned.length) {
+      parentRun.spawned = spawned.map(s => s.agent);
+      this._persistRun(parentRun);
     }
   }
 
