@@ -28,13 +28,13 @@ function createWorktree(cwd, runId, agentName, dataDir, branch) {
       execFileSync('git', ['-C', repoRoot, 'fetch', 'origin', branch], { stdio: 'pipe' });
       execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-B', branch, worktreeDir, `origin/${branch}`], { stdio: 'pipe' });
     } else {
-      // Branch doesn't exist yet — create from origin/main
-      execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-b', branch, worktreeDir, 'origin/main'], { stdio: 'pipe' });
+      // Branch doesn't exist remotely — create (or reset) from origin/main
+      execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-B', branch, worktreeDir, 'origin/main'], { stdio: 'pipe' });
     }
   } else {
     // No branch arg — default behavior, branch from origin/main
     const defaultBranch = `oneshot/${agentName}/${runId}`;
-    execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-b', defaultBranch, worktreeDir, 'origin/main'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoRoot, 'worktree', 'add', '-B', defaultBranch, worktreeDir, 'origin/main'], { stdio: 'pipe' });
     branch = defaultBranch;
   }
 
