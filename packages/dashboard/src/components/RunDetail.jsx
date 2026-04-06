@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchRun, fetchRunLogs, fetchLogContent } from '../api';
+import { useState, useEffect, useRef } from 'react';
+import { fetchRun, fetchRunLogs, fetchLogContent, fetchLogTail } from '../api';
 
-const PAGE_SIZE = 50;
 const LOG_LABELS = { 'stdout.log': 'Logs', 'stderr.log': 'Errors' };
+const TAIL_INTERVAL = 3000;
 
 export default function RunDetail({ runId, onBack }) {
   const [run, setRun] = useState(null);
@@ -10,21 +10,14 @@ export default function RunDetail({ runId, onBack }) {
   const [entries, setEntries] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [error, setError] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const offsetRef = useRef(0);
+  const lastLineRef = useRef(0);
   const timelineRef = useRef(null);
 
-  async function loadPage(filename, offset, append = false) {
-    const data = await fetchLogContent(runId, filename, { offset, limit: PAGE_SIZE });
+  async function loadAll(filename) {
+    const data = await fetchLogContent(runId, filename);
     const parsed = parseLines(data.lines);
-    if (append) {
-      setEntries(prev => [...prev, ...parsed]);
-    } else {
-      setEntries(parsed);
-    }
-    offsetRef.current = offset + data.lines.length;
-    setHasMore(data.hasMore);
+    setEntries(parsed);
+    lastLineRef.current = data.offset + data.lines.length;
   }
 
   useEffect(() => {
@@ -43,8 +36,8 @@ export default function RunDetail({ runId, onBack }) {
         if (logsData.files?.length && !selectedLog) {
           const first = logsData.files.find(f => f.name === 'stdout.log')?.name || logsData.files[0].name;
           setSelectedLog(first);
-          offsetRef.current = 0;
-          await loadPage(first, 0);
+          lastLineRef.current = 0;
+          await loadAll(first);
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -61,29 +54,34 @@ export default function RunDetail({ runId, onBack }) {
     return () => { cancelled = true; clearInterval(interval); };
   }, [runId]);
 
+  // Poll for new log lines while run is active
+  useEffect(() => {
+    if (!run || run.status !== 'running' || !selectedLog) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchLogTail(runId, selectedLog, lastLineRef.current);
+        if (data.lines.length > 0) {
+          const newEntries = parseLines(data.lines);
+          setEntries(prev => [...newEntries, ...prev]);
+          lastLineRef.current = data.lastLine;
+        }
+      } catch {}
+    }, TAIL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [run?.status, selectedLog, runId]);
+
   async function selectLog(filename) {
     setSelectedLog(filename);
     setEntries([]);
-    offsetRef.current = 0;
-    setHasMore(false);
+    lastLineRef.current = 0;
     try {
-      await loadPage(filename, 0);
+      await loadAll(filename);
     } catch (err) {
       setEntries([{ type: 'error', label: 'error', summary: `Error: ${err.message}` }]);
     }
   }
-
-  const handleScroll = useCallback(async () => {
-    const el = timelineRef.current;
-    if (!el || loadingMore || !hasMore || !selectedLog) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-      setLoadingMore(true);
-      try {
-        await loadPage(selectedLog, offsetRef.current, true);
-      } catch {}
-      setLoadingMore(false);
-    }
-  }, [loadingMore, hasMore, selectedLog, runId]);
 
   if (error) return <div className="error-box">{error}</div>;
   if (!run) return <div className="loading">Loading...</div>;
@@ -141,17 +139,13 @@ export default function RunDetail({ runId, onBack }) {
                 ))}
               </div>
             )}
-            <div className="timeline" ref={timelineRef} onScroll={handleScroll}>
+            <div className="timeline" ref={timelineRef}>
               {entries.length === 0 ? (
                 <p className="empty">Empty log</p>
               ) : (
                 entries.map((entry, i) => (
                   <TimelineEntry key={i} entry={entry} />
                 ))
-              )}
-              {loadingMore && <div className="loading">Loading more...</div>}
-              {hasMore && !loadingMore && (
-                <div className="loading" style={{ padding: '12px', fontSize: '12px' }}>Scroll for more</div>
               )}
             </div>
           </>
