@@ -57,8 +57,13 @@ export async function fetchRunLogs(id) {
   return res.json();
 }
 
-export async function fetchLogContent(runId, filename, { offset = 0, limit = 50 } = {}) {
-  const res = await request(`/runs/${runId}/logs/${filename}?offset=${offset}&limit=${limit}`);
+export async function fetchLogContent(runId, filename) {
+  const res = await request(`/runs/${runId}/logs/${filename}`);
+  return res.json();
+}
+
+export async function fetchLogTail(runId, filename, after) {
+  const res = await request(`/runs/${runId}/logs/${filename}/tail?after=${after}`);
   return res.json();
 }
 
