@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NaturalCron from './NaturalCron';
 import { updateSchedule, deleteSchedule } from '../api';
 
@@ -19,6 +19,13 @@ export default function ScheduleCard({ schedule, onUpdate }) {
   const [enabled, setEnabled] = useState(schedule.enabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!editing) {
+      setCron(schedule.cron);
+      setEnabled(schedule.enabled);
+    }
+  }, [schedule.cron, schedule.enabled, editing]);
 
   function handleToggleEdit() {
     if (saving) return;
@@ -55,6 +62,7 @@ export default function ScheduleCard({ schedule, onUpdate }) {
       onUpdate();
     } catch (err) {
       setError(err.message);
+    } finally {
       setSaving(false);
     }
   }
