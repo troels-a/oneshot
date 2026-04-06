@@ -153,7 +153,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
             <div className="run-card-list">
               {schedules.map((s) => (
                 <div key={s.id} className={`run-card-wrapper ${s.enabled ? 'status-completed' : ''}`}>
-                  <ScheduleCard schedule={s} />
+                  <ScheduleCard schedule={s} onUpdate={() => fetchAllSchedules().then(all => setSchedules(all))} />
                 </div>
               ))}
             </div>

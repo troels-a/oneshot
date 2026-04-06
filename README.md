@@ -12,8 +12,6 @@
 
 Oneshot is built for running autonomous agents on remote servers. Define agents as simple Markdown files — Claude prompts, Node.js scripts, or Bash scripts — and fire them off on-demand or on a cron schedule through a REST API, CLI, or web dashboard. Deploy it on a VPS and use it as the backbone for your agent infrastructure.
 
-MCP server support is coming.
-
 ## Install
 
 ```bash
@@ -70,6 +68,10 @@ commands:
 Today is {{ commands.date }}. Research {{ args.topic }} and write a summary.
 ```
 
+#### Worktree isolation
+
+Add `worktree: true` to the frontmatter to run each invocation in an isolated git worktree branch. This prevents concurrent runs from interfering with each other.
+
 ### Runtimes
 
 | Runtime | Body is | Best for |
@@ -84,12 +86,47 @@ Today is {{ commands.date }}. Research {{ args.topic }} and write a summary.
 
 **Commands** run shell commands at prep time. Results are available as `{{ commands.name }}` — useful for injecting dates, git info, or system state.
 
+### Agent Spawning
+
+Agents can spawn follow-up agents by writing JSON files to `$ONESHOT_SPAWN_DIR`. This environment variable is set automatically for every run and points to a run-specific directory.
+
+Spawned agents dispatch after the parent run completes. JSON format:
+
+```json
+{
+  "agent": "next-agent-name",
+  "args": { "key": "value" },
+  "path": "my-project",
+  "timeout": 300
+}
+```
+
+- `agent` (required) — name of the agent to dispatch
+- `args` — arguments to pass to the spawned agent
+- `path` — working directory for the spawned run
+- `timeout` — timeout in seconds
+
+### Run Environment Variables
+
+Every agent run receives these environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ONESHOT_SPAWN_DIR` | Directory for writing spawn request files |
+| `ONESHOT_RUN_ID` | Unique ID for the current run |
+| `ONESHOT_AGENT` | Name of the agent being run |
+| `ONESHOT_PATH` | Working directory (if `--path` was provided) |
+| `ONESHOT_BRANCH` | Git branch name (if worktree mode is active) |
+
 ## CLI
 
 ```bash
 oneshot list                          # List all agents
 oneshot info my-agent                 # Show agent details
 oneshot run my-agent --topic=value    # Run an agent
+oneshot run my-agent --path=dir       # Run in a specific directory
+oneshot schedule my-agent "0 9 * * *" # Create a cron schedule
+oneshot schedules                     # List all schedules
 oneshot clear                         # Clear completed/failed runs
 ```
 
@@ -117,7 +154,7 @@ POST   /agents/:agent/dispatch        # Run an agent
 curl -X POST http://localhost:3000/agents/my-agent/dispatch \
   -H "Authorization: Bearer $ONESHOT_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"args": {"topic": "web frameworks"}}'
+  -d '{"args": {"topic": "web frameworks"}, "path": "my-project", "timeout": 300}'
 ```
 
 Only one instance of an agent runs at a time. Returns `409` if already running.
@@ -136,10 +173,12 @@ DELETE /runs                          # Clear completed/failed runs
 ### Schedules
 
 ```
-POST   /agents/:agent/schedules      # Create schedule
-GET    /agents/:agent/schedules       # List schedules
-PUT    /agents/:agent/schedules/:id   # Update schedule
-DELETE /agents/:agent/schedules/:id   # Delete schedule
+GET    /schedules                             # List all schedules
+POST   /agents/:agent/schedules               # Create schedule
+GET    /agents/:agent/schedules               # List agent schedules
+GET    /agents/:agent/schedules/:id           # Get specific schedule
+PATCH  /agents/:agent/schedules/:id           # Update schedule
+DELETE /agents/:agent/schedules/:id           # Delete schedule
 ```
 
 ```bash

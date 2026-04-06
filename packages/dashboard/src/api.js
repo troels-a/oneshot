@@ -74,6 +74,21 @@ export async function fetchAllSchedules() {
   return data.schedules;
 }
 
+export async function updateSchedule(agent, scheduleId, data) {
+  const res = await request(`/agents/${agent}/schedules/${scheduleId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteSchedule(agent, scheduleId) {
+  await request(`/agents/${agent}/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function clearRuns() {
   const res = await request('/runs', { method: 'DELETE' });
   return res.json();
