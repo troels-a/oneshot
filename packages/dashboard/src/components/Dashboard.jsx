@@ -57,7 +57,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   if (clampedPage !== page) setPage(clampedPage);
   const start = clampedPage * PAGE_SIZE;
   const pagedRuns = runs.slice(start, start + PAGE_SIZE);
-  const hasClearable = runs.some(r => r.status === 'completed' || r.status === 'failed');
+  const hasClearable = runs.some(r => r.status !== 'running' && r.status !== 'pending');
 
   if (loading) return <div className="loading">Loading...</div>;
 

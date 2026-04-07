@@ -68,7 +68,7 @@ if (command === 'info') {
 if (command === 'clear') {
   const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
   const runs = manager.listRuns({});
-  const clearable = runs.filter(r => r.status === 'completed' || r.status === 'failed');
+  const clearable = runs.filter(r => r.status !== 'running' && r.status !== 'pending');
 
   if (clearable.length === 0) {
     console.log('No completed or failed runs to clear.');
