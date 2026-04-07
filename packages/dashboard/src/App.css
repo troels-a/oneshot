@@ -568,6 +568,11 @@ body::after,
   color: var(--yellow);
 }
 
+.badge-timed_out {
+  background: var(--orange-bg);
+  color: var(--orange);
+}
+
 /* ---- Tabs (for sub-navigation) ---- */
 .tabs {
   display: flex;
@@ -725,6 +730,35 @@ body::after,
 
 .run-meta strong {
   color: var(--text-muted);
+}
+
+.run-args {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.run-arg {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.run-arg dt {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.run-arg dd {
+  margin: 0;
+  word-break: break-word;
+  min-width: 0;
 }
 
 /* ---- Clear button ---- */

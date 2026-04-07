@@ -1,4 +1,5 @@
 const { REPO_ROOT, DATA_DIR } = require('./paths');
+const dispatchOptions = require('./dispatch-options');
 
 module.exports = {
   REPO_ROOT,
@@ -21,4 +22,9 @@ module.exports = {
   createWorktree: require('./worktree').createWorktree,
   removeWorktree: require('./worktree').removeWorktree,
   Scheduler: require('./scheduler'),
+  DEFAULT_TIMEOUT_SEC: dispatchOptions.DEFAULT_TIMEOUT_SEC,
+  DISPATCH_OPTIONS: dispatchOptions.DISPATCH_OPTIONS,
+  DISPATCH_OPTION_KEYS: dispatchOptions.DISPATCH_OPTION_KEYS,
+  validateDispatchOptions: dispatchOptions.validateDispatchOptions,
+  pickDispatchOptions: dispatchOptions.pickDispatchOptions,
 };

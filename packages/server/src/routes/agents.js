@@ -3,23 +3,10 @@ const path = require('path');
 const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
 const { discoverAgents, parseAgentMd, serializeAgentMd } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
-const { validateBody } = require('../lib/validate-dispatch-options');
+const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 
-const RESERVED_KEYS = new Set(['args', 'path', 'timeout']);
 const VALID_NAME = /^[a-zA-Z0-9_-]+$/;
 const VALID_RUNTIMES = new Set(['claude', 'node', 'bash']);
-
-function normalizeBody(body) {
-  if (body.args || Object.keys(body).every(k => RESERVED_KEYS.has(k))) {
-    return body;
-  }
-  const { path, timeout, ...args } = body;
-  const normalized = {};
-  if (path !== undefined) normalized.path = path;
-  if (timeout !== undefined) normalized.timeout = timeout;
-  if (Object.keys(args).length) normalized.args = args;
-  return normalized;
-}
 
 const router = Router();
 
@@ -38,7 +25,7 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
     const { agent } = req.params;
     const manager = req.runManager;
 
-    const body = normalizeBody(req.body || {});
+    const body = coerceDispatchBody(req.body || {});
     const errors = validateBody(body);
     if (errors.length) {
       return res.status(400).json({ error: errors.join('; ') });

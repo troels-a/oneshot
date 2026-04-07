@@ -101,7 +101,25 @@ export default function RunDetail({ runId, onBack }) {
           <div><strong>Completed:</strong> {run.completedAt ? new Date(run.completedAt).toLocaleString() : '-'}</div>
           <div><strong>Exit Code:</strong> {run.exitCode ?? '-'}</div>
           {run.signal && <div><strong>Signal:</strong> {run.signal}</div>}
+          {(run.cwd || run.options?.path) && (
+            <div><strong>Path:</strong> <span className="mono">{run.cwd || run.options.path}</span></div>
+          )}
+          {run.worktree?.dir && (
+            <div><strong>Worktree:</strong> <span className="mono">{run.worktree.dir}</span></div>
+          )}
+          {run.options?.branch && <div><strong>Branch:</strong> <span className="mono">{run.options.branch}</span></div>}
+          {run.options?.timeout && <div><strong>Timeout:</strong> {run.options.timeout}s</div>}
         </div>
+        {run.options?.args && Object.keys(run.options.args).length > 0 && (
+          <dl className="run-args">
+            {Object.entries(run.options.args).map(([key, value]) => (
+              <div key={key} className="run-arg">
+                <dt>{key}</dt>
+                <dd className="mono">{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
 
       {run.result && (
