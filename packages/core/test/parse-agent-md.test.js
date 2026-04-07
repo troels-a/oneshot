@@ -109,6 +109,12 @@ body`);
     assert.strictEqual(result.worktree, true);
   });
 
+  it('parses codex runtime', () => {
+    const p = writeAgent(`---\nruntime: codex\n---\nDo something`);
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.runtime, 'codex');
+  });
+
   it('defaults worktree to false when omitted', () => {
     const p = writeAgent(`---
 runtime: bash

@@ -18,6 +18,12 @@ function buildCommand(runtime, agentDir, renderedPrompt, args) {
         args: ['-p', renderedPrompt, '--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose'],
       };
 
+    case 'codex':
+      return {
+        cmd: 'codex',
+        args: ['--quiet', '--full-auto', renderedPrompt],
+      };
+
     case 'node': {
       const tmpFile = path.join(os.tmpdir(), `oneshot-${Date.now()}-${Math.random().toString(36).slice(2)}.js`);
       writeFileSync(tmpFile, renderedPrompt);

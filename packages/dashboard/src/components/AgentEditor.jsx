@@ -3,6 +3,7 @@ import { fetchAgent, createAgent, updateAgent, deleteAgent, fetchAgentFiles, cre
 
 const EDITOR_LABELS = {
   claude: { title: 'Prompt', hint: "Supports {{ args.* }} and {{ commands.* }} templates", placeholder: 'Enter the agent prompt...' },
+  codex: { title: 'Prompt', hint: "Supports {{ args.* }} and {{ commands.* }} templates", placeholder: 'Enter the agent prompt...' },
   node: { title: 'Script', hint: 'Node.js — args passed as --key value flags via process.argv', placeholder: '// Your Node.js script here...\nconst args = process.argv.slice(2);\nconsole.log(args);\n' },
   bash: { title: 'Script', hint: 'Bash — args passed as --key value flags', placeholder: '#!/usr/bin/env bash\n# Your script here\necho "args: $@"\n' },
 };
@@ -184,7 +185,7 @@ export default function AgentEditor({ agentName, onBack }) {
               <span className="editor-card-title">Runtime</span>
             </div>
             <div className="runtime-toggle">
-              {['claude', 'node', 'bash'].map(r => (
+              {['claude', 'codex', 'node', 'bash'].map(r => (
                 <button key={r} className={`runtime-option ${runtime === r ? 'active' : ''}`} onClick={() => { setRuntime(r); setDirty(true); }}>{r}</button>
               ))}
             </div>

@@ -1,7 +1,7 @@
 const { readFileSync } = require('fs');
 const YAML = require('yaml');
 
-const VALID_RUNTIMES = new Set(['claude', 'node', 'bash']);
+const VALID_RUNTIMES = new Set(['claude', 'node', 'bash', 'codex']);
 
 function parseAgentMd(filePath) {
   const raw = readFileSync(filePath, 'utf8');
