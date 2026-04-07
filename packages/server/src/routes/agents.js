@@ -6,7 +6,7 @@ const validateParams = require('../middleware/validate-params');
 const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 
 const VALID_NAME = /^[a-zA-Z0-9_-]+$/;
-const VALID_RUNTIMES = new Set(['claude', 'node', 'bash']);
+const VALID_RUNTIMES = new Set(['claude', 'node', 'bash', 'codex']);
 
 const router = Router();
 
@@ -75,7 +75,7 @@ router.post('/agents', (req, res) => {
     return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
   }
   if (!runtime || !VALID_RUNTIMES.has(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
+    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash, codex' });
   }
 
   const agentDir = path.join(req.agentsDir, name);
@@ -100,7 +100,7 @@ router.put('/agents/:agent', validateParams, (req, res) => {
 
   const { runtime, args, commands, body, worktree } = req.body;
   if (!runtime || !VALID_RUNTIMES.has(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash' });
+    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash, codex' });
   }
   const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
