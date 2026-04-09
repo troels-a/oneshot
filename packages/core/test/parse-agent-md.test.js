@@ -150,4 +150,25 @@ body`);
     const result = parseAgentMd(p);
     assert.strictEqual(result.worktree, false);
   });
+
+  it('parses multi_instance: true from frontmatter', () => {
+    const p = writeAgent(`---
+runtime: claude
+multi_instance: true
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.multi_instance, true);
+  });
+
+  it('defaults multi_instance to false when omitted', () => {
+    const p = writeAgent(`---
+runtime: bash
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.multi_instance, false);
+  });
 });

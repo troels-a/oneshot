@@ -152,3 +152,55 @@ describe('agent CRUD runtime validation', () => {
     assert.ok(res.body.error.includes('claude'));
   });
 });
+
+describe('dispatch multi_instance guard', () => {
+  before(() => {
+    rmSync(TMP, { recursive: true, force: true });
+    mkdirSync(TMP, { recursive: true });
+  });
+
+  after(() => {
+    rmSync(TMP, { recursive: true, force: true });
+  });
+
+  it('returns 409 when agent is running and multi_instance is false', async () => {
+    const agentsDir = path.join(TMP, 'agents-409');
+    writeAgent(agentsDir, 'single', '---\nruntime: bash\n---\nbody');
+    const manager = fakeManager({ getRunningRun: () => ({ id: 'existing-run' }) });
+    const app = makeApp(manager, agentsDir);
+
+    const res = await request(app)
+      .post('/agents/single/dispatch')
+      .send({});
+
+    assert.strictEqual(res.status, 409);
+    assert.strictEqual(res.body.runId, 'existing-run');
+  });
+
+  it('returns 409 when agent is running and multi_instance is omitted', async () => {
+    const agentsDir = path.join(TMP, 'agents-409-omitted');
+    writeAgent(agentsDir, 'default', '---\nruntime: bash\n---\nbody');
+    const manager = fakeManager({ getRunningRun: () => ({ id: 'existing-run' }) });
+    const app = makeApp(manager, agentsDir);
+
+    const res = await request(app)
+      .post('/agents/default/dispatch')
+      .send({});
+
+    assert.strictEqual(res.status, 409);
+  });
+
+  it('allows concurrent dispatch when multi_instance is true', async () => {
+    const agentsDir = path.join(TMP, 'agents-multi');
+    writeAgent(agentsDir, 'multi', '---\nruntime: bash\nmulti_instance: true\n---\nbody');
+    const manager = fakeManager({ getRunningRun: () => ({ id: 'existing-run' }) });
+    const app = makeApp(manager, agentsDir);
+
+    const res = await request(app)
+      .post('/agents/multi/dispatch')
+      .send({});
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(manager.dispatched.length, 1);
+  });
+});
