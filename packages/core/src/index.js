@@ -1,5 +1,6 @@
 const { REPO_ROOT, DATA_DIR } = require('./paths');
 const dispatchOptions = require('./dispatch-options');
+const runtimes = require('./runtimes');
 
 module.exports = {
   REPO_ROOT,
@@ -27,4 +28,9 @@ module.exports = {
   DISPATCH_OPTION_KEYS: dispatchOptions.DISPATCH_OPTION_KEYS,
   validateDispatchOptions: dispatchOptions.validateDispatchOptions,
   pickDispatchOptions: dispatchOptions.pickDispatchOptions,
+  getRuntime: runtimes.getRuntime,
+  listRuntimes: runtimes.listRuntimes,
+  listRuntimeMetadata: runtimes.listRuntimeMetadata,
+  isValidRuntime: runtimes.isValidRuntime,
+  normalizeRuntimeOptions: runtimes.normalizeRuntimeOptions,
 };

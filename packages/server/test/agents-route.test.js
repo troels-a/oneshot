@@ -108,3 +108,45 @@ describe('POST /agents/:agent/dispatch', () => {
     assert.deepStrictEqual(manager.dispatched[0].options.args, { task: 'go' });
   });
 });
+
+describe('agent CRUD runtime validation', () => {
+  before(() => {
+    rmSync(TMP, { recursive: true, force: true });
+    mkdirSync(TMP, { recursive: true });
+  });
+
+  it('creates a codex agent with runtime options', async () => {
+    const agentsDir = path.join(TMP, 'agents-create-codex');
+    mkdirSync(agentsDir, { recursive: true });
+    const app = makeApp(fakeManager(), agentsDir);
+
+    const res = await request(app)
+      .post('/agents')
+      .send({
+        name: 'codex-agent',
+        runtime: 'codex',
+        body: 'Review this branch.',
+        runtimeOptions: {
+          sandboxMode: 'danger-full-access',
+          approvalPolicy: 'never',
+          webSearch: true,
+        },
+      });
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.runtime, 'codex');
+    assert.strictEqual(res.body.runtimeOptions.sandboxMode, 'danger-full-access');
+  });
+
+  it('lists runtime metadata alongside agents', async () => {
+    const agentsDir = path.join(TMP, 'agents-list-runtimes');
+    writeAgent(agentsDir, 'noop', '---\nruntime: bash\n---\nbody');
+    const app = makeApp(fakeManager(), agentsDir);
+
+    const res = await request(app).get('/agents');
+
+    assert.strictEqual(res.status, 200);
+    assert.ok(Array.isArray(res.body.runtimes));
+    assert.ok(res.body.runtimes.some(runtime => runtime.name === 'codex'));
+  });
+});

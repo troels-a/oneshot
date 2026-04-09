@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { fetchAgent, createAgent, updateAgent, deleteAgent, fetchAgentFiles, createAgentFile, uploadAgentFile, deleteAgentFile } from '../api';
-
-const EDITOR_LABELS = {
-  claude: { title: 'Prompt', hint: "Supports {{ args.* }} and {{ commands.* }} templates", placeholder: 'Enter the agent prompt...' },
-  codex: { title: 'Prompt', hint: "Supports {{ args.* }} and {{ commands.* }} templates", placeholder: 'Enter the agent prompt...' },
-  node: { title: 'Script', hint: 'Node.js — args passed as --key value flags via process.argv', placeholder: '// Your Node.js script here...\nconst args = process.argv.slice(2);\nconsole.log(args);\n' },
-  bash: { title: 'Script', hint: 'Bash — args passed as --key value flags', placeholder: '#!/usr/bin/env bash\n# Your script here\necho "args: $@"\n' },
-};
+import { fetchAgent, createAgent, updateAgent, deleteAgent, fetchAgentFiles, createAgentFile, uploadAgentFile, deleteAgentFile, fetchRuntimes } from '../api';
 
 export default function AgentEditor({ agentName, onBack }) {
   const isNew = !agentName;
@@ -15,10 +8,12 @@ export default function AgentEditor({ agentName, onBack }) {
   // Form state
   const [name, setName] = useState('');
   const [runtime, setRuntime] = useState('claude');
+  const [runtimes, setRuntimes] = useState([]);
   const [args, setArgs] = useState([]);
   const [commands, setCommands] = useState([]);
   const [body, setBody] = useState('');
   const [worktree, setWorktree] = useState(false);
+  const [runtimeOptions, setRuntimeOptions] = useState({});
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
@@ -31,20 +26,45 @@ export default function AgentEditor({ agentName, onBack }) {
     setCommands(agent.commands || []);
     setBody(agent.body || '');
     setWorktree(agent.worktree || false);
+    setRuntimeOptions(agent.runtimeOptions || {});
     setFiles(filesData.files || []);
+  }
+
+  function getRuntimeDefinition(runtimeName, runtimeList = runtimes) {
+    return runtimeList.find(item => item.name === runtimeName) || null;
+  }
+
+  function getDefaultRuntimeOptions(runtimeName, runtimeList = runtimes) {
+    const runtimeDef = getRuntimeDefinition(runtimeName, runtimeList);
+    if (!runtimeDef) return {};
+    return Object.fromEntries((runtimeDef.runtimeOptions || [])
+      .filter(option => option.default !== undefined)
+      .map(option => [option.name, option.default]));
   }
 
   // Load existing agent
   useEffect(() => {
+    const requests = [fetchRuntimes()];
     if (!isNew) {
-      Promise.all([fetchAgent(agentName), fetchAgentFiles(agentName)])
-        .then(([agent, filesData]) => {
+      requests.push(fetchAgent(agentName), fetchAgentFiles(agentName));
+    }
+
+    Promise.all(requests)
+      .then(([runtimeList, agent, filesData]) => {
+        setRuntimes(runtimeList || []);
+        if (isNew) {
+          if ((runtimeList || []).length > 0) {
+            const nextRuntime = runtimeList.some(item => item.name === runtime) ? runtime : runtimeList[0].name;
+            setRuntime(nextRuntime);
+            setRuntimeOptions(getDefaultRuntimeOptions(nextRuntime, runtimeList));
+          }
+        } else {
           setName(agentName);
           hydrateAgent(agent, filesData);
-        })
-        .catch(err => setError(err.message))
-        .finally(() => setLoading(false));
-    }
+        }
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, [agentName]);
 
   // Dirty guard
@@ -61,7 +81,7 @@ export default function AgentEditor({ agentName, onBack }) {
   async function handleSave() {
     setSaving(true); setError('');
     try {
-      const data = { runtime, args, commands, body, worktree };
+      const data = { runtime, args, commands, body, worktree, runtimeOptions };
       if (isNew) {
         await createAgent({ name, ...data });
       } else {
@@ -151,7 +171,13 @@ export default function AgentEditor({ agentName, onBack }) {
 
   if (loading) return <div className="loading">Loading...</div>;
 
-  const editorLabel = EDITOR_LABELS[runtime] || EDITOR_LABELS.claude;
+  const runtimeDef = getRuntimeDefinition(runtime) || runtimes[0] || null;
+  const editorLabel = runtimeDef?.editor || {
+    title: 'Prompt',
+    hint: "Supports {{ args.* }} and {{ commands.* }} templates",
+    placeholder: 'Enter the agent prompt...',
+  };
+  const runtimeOptionDefs = runtimeDef?.runtimeOptions || [];
 
   return (
     <div>
@@ -185,11 +211,70 @@ export default function AgentEditor({ agentName, onBack }) {
               <span className="editor-card-title">Runtime</span>
             </div>
             <div className="runtime-toggle">
-              {['claude', 'codex', 'node', 'bash'].map(r => (
-                <button key={r} className={`runtime-option ${runtime === r ? 'active' : ''}`} onClick={() => { setRuntime(r); setDirty(true); }}>{r}</button>
+              {runtimes.map(r => (
+                <button
+                  key={r.name}
+                  className={`runtime-option ${runtime === r.name ? 'active' : ''}`}
+                  onClick={() => {
+                    setRuntime(r.name);
+                    setRuntimeOptions(getDefaultRuntimeOptions(r.name));
+                    setDirty(true);
+                  }}
+                >
+                  {r.name}
+                </button>
               ))}
             </div>
           </div>
+
+          {runtimeOptionDefs.length > 0 && (
+            <div className="glass-card">
+              <div className="editor-card-header">
+                <span className="editor-card-title">Runtime Settings</span>
+              </div>
+              {runtimeOptionDefs.map((option) => (
+                <div key={option.name} className="editor-field" style={{ marginBottom: 14 }}>
+                  <label>{option.label}</label>
+                  {option.type === 'boolean' ? (
+                    <label style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13}}>
+                      <input
+                        type="checkbox"
+                        checked={!!runtimeOptions[option.name]}
+                        onChange={(e) => {
+                          setRuntimeOptions(prev => ({ ...prev, [option.name]: e.target.checked }));
+                          setDirty(true);
+                        }}
+                      />
+                      {option.description}
+                    </label>
+                  ) : option.type === 'select' ? (
+                    <>
+                      <select
+                        value={runtimeOptions[option.name] ?? option.default ?? ''}
+                        onChange={(e) => {
+                          setRuntimeOptions(prev => ({ ...prev, [option.name]: e.target.value }));
+                          setDirty(true);
+                        }}
+                      >
+                        {(option.options || []).map(choice => (
+                          <option key={choice.value} value={choice.value}>{choice.label}</option>
+                        ))}
+                      </select>
+                      {option.description && <div className="cmd-hint">{option.description}</div>}
+                    </>
+                  ) : (
+                    <input
+                      value={runtimeOptions[option.name] ?? option.default ?? ''}
+                      onChange={(e) => {
+                        setRuntimeOptions(prev => ({ ...prev, [option.name]: e.target.value }));
+                        setDirty(true);
+                      }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="glass-card">
             <div className="editor-card-header">

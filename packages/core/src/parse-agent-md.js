@@ -1,7 +1,6 @@
 const { readFileSync } = require('fs');
 const YAML = require('yaml');
-
-const VALID_RUNTIMES = new Set(['claude', 'node', 'bash', 'codex']);
+const { isValidRuntime, normalizeRuntimeOptions, listRuntimes } = require('./runtimes');
 
 function parseAgentMd(filePath) {
   const raw = readFileSync(filePath, 'utf8');
@@ -19,8 +18,9 @@ function parseAgentMd(filePath) {
     throw new Error(`Invalid agent.md: missing runtime in ${filePath}`);
   }
 
-  if (!VALID_RUNTIMES.has(runtime)) {
-    throw new Error(`Invalid runtime "${runtime}" in ${filePath}. Must be one of: ${[...VALID_RUNTIMES].join(', ')}`);
+  if (!isValidRuntime(runtime)) {
+    const validRuntimes = listRuntimes().map(item => item.name);
+    throw new Error(`Invalid runtime "${runtime}" in ${filePath}. Must be one of: ${validRuntimes.join(', ')}`);
   }
 
   const args = Array.isArray(frontmatter.args) ? frontmatter.args.map(arg => {
@@ -30,6 +30,7 @@ function parseAgentMd(filePath) {
 
   const commands = Array.isArray(frontmatter.commands) ? frontmatter.commands : [];
   const worktree = frontmatter.worktree === true;
+  const runtimeOptions = normalizeRuntimeOptions(runtime, frontmatter.runtimeOptions || frontmatter.runtime_options || {});
 
   return {
     runtime,
@@ -37,6 +38,7 @@ function parseAgentMd(filePath) {
     commands,
     body,
     worktree,
+    runtimeOptions,
   };
 }
 

@@ -109,10 +109,36 @@ body`);
     assert.strictEqual(result.worktree, true);
   });
 
-  it('parses codex runtime', () => {
-    const p = writeAgent(`---\nruntime: codex\n---\nDo something`);
+  it('parses codex runtime options and applies defaults', () => {
+    const p = writeAgent(`---
+runtime: codex
+runtimeOptions:
+  sandboxMode: danger-full-access
+  webSearch: true
+---
+body`);
+
     const result = parseAgentMd(p);
     assert.strictEqual(result.runtime, 'codex');
+    assert.deepStrictEqual(result.runtimeOptions, {
+      approvalPolicy: 'never',
+      sandboxMode: 'danger-full-access',
+      webSearch: true,
+      bypassApprovalsAndSandbox: false,
+    });
+  });
+
+  it('accepts runtime_options alias for backwards compatibility', () => {
+    const p = writeAgent(`---
+runtime: codex
+runtime_options:
+  approvalPolicy: on-request
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.runtimeOptions.approvalPolicy, 'on-request');
+    assert.strictEqual(result.runtimeOptions.sandboxMode, 'workspace-write');
   });
 
   it('defaults worktree to false when omitted', () => {

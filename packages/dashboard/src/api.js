@@ -38,6 +38,12 @@ export async function fetchAgents() {
   return data.agents;
 }
 
+export async function fetchRuntimes() {
+  const res = await request('/runtimes');
+  const data = await res.json();
+  return data.runtimes;
+}
+
 export async function fetchRuns(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
