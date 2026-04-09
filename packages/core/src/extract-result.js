@@ -33,6 +33,34 @@ function extractResult(logDir, runtime) {
     return { result: null, meta: null };
   }
 
+  if (runtime === 'codex') {
+    const lines = content.trimEnd().split('\n');
+    let result = null;
+    let meta = null;
+
+    for (const line of lines) {
+      try {
+        const obj = JSON.parse(line);
+
+        if (obj.type === 'item.completed' && obj.item?.type === 'agent_message') {
+          result = obj.item.text || null;
+        }
+
+        if (obj.type === 'turn.completed') {
+          meta = {
+            input_tokens: obj.usage?.input_tokens ?? null,
+            cached_input_tokens: obj.usage?.cached_input_tokens ?? null,
+            output_tokens: obj.usage?.output_tokens ?? null,
+          };
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return { result, meta };
+  }
+
   // node / bash — stdout is the result
   const trimmed = content.length > MAX_RESULT_SIZE
     ? content.slice(-MAX_RESULT_SIZE)

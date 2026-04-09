@@ -21,7 +21,7 @@ function buildCommand(runtime, agentDir, renderedPrompt, args) {
     case 'codex':
       return {
         cmd: 'codex',
-        args: ['--quiet', '--full-auto', renderedPrompt],
+        args: ['exec', '--skip-git-repo-check', '--full-auto', '--json', renderedPrompt],
       };
 
     case 'node': {

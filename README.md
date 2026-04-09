@@ -10,7 +10,7 @@
 
 ---
 
-Oneshot is built for running autonomous agents on remote servers. Define agents as simple Markdown files — Claude prompts, Node.js scripts, or Bash scripts — and fire them off on-demand or on a cron schedule through a REST API, CLI, or web dashboard. Deploy it on a VPS and use it as the backbone for your agent infrastructure.
+Oneshot is built for running autonomous agents on remote servers. Define agents as simple Markdown files — Claude prompts, Codex prompts, Node.js scripts, or Bash scripts — and fire them off on-demand or on a cron schedule through a REST API, CLI, or web dashboard. Deploy it on a VPS and use it as the backbone for your agent infrastructure.
 
 ## Install
 
@@ -77,6 +77,7 @@ Add `worktree: true` to the frontmatter to run each invocation in an isolated gi
 | Runtime | Body is | Best for |
 |---------|---------|----------|
 | `claude` | A prompt passed to `claude -p` | Tasks needing an AI agent with tool access |
+| `codex` | A prompt passed to `codex exec` | Tasks needing a Codex coding agent |
 | `node` | JavaScript executed via `node` | Programmatic / API tasks |
 | `bash` | A shell script executed via `bash` | Shell automation |
 
