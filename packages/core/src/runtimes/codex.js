@@ -29,14 +29,14 @@ const runtimeOptions = [
   {
     name: 'webSearch',
     label: 'Enable Web Search',
-    description: 'Expose Codex web search during the run.',
+    description: 'Enable web search',
     type: 'boolean',
     default: false,
   },
   {
     name: 'bypassApprovalsAndSandbox',
     label: 'Bypass Sandbox',
-    description: 'Run without approval prompts or sandboxing. Only use inside an external sandbox.',
+    description: 'Bypass sandbox',
     type: 'boolean',
     default: false,
   },

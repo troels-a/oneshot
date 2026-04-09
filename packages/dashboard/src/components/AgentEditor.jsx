@@ -235,8 +235,7 @@ export default function AgentEditor({ agentName, onBack }) {
                 <span className="editor-card-title">Runtime Settings</span>
               </div>
               {runtimeOptionDefs.map((option) => (
-                <div key={option.name} className="editor-field" style={{ marginBottom: 14 }}>
-                  <label>{option.label}</label>
+                <div key={option.name} className={option.type === 'boolean' ? undefined : 'editor-field'} style={{ marginBottom: 14 }}>
                   {option.type === 'boolean' ? (
                     <label style={{display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13}}>
                       <input
@@ -251,6 +250,7 @@ export default function AgentEditor({ agentName, onBack }) {
                     </label>
                   ) : option.type === 'select' ? (
                     <>
+                      <label>{option.label}</label>
                       <select
                         value={runtimeOptions[option.name] ?? option.default ?? ''}
                         onChange={(e) => {
@@ -265,6 +265,8 @@ export default function AgentEditor({ agentName, onBack }) {
                       {option.description && <div className="cmd-hint">{option.description}</div>}
                     </>
                   ) : (
+                    <>
+                    <label>{option.label}</label>
                     <input
                       value={runtimeOptions[option.name] ?? option.default ?? ''}
                       onChange={(e) => {
@@ -272,6 +274,7 @@ export default function AgentEditor({ agentName, onBack }) {
                         setDirty(true);
                       }}
                     />
+                    </>
                   )}
                 </div>
               ))}

@@ -6,7 +6,7 @@ const { mkdirSync, rmSync, existsSync, writeFileSync } = require('fs');
 const { execFileSync } = require('child_process');
 const { createWorktree, removeWorktree } = require('../src/worktree');
 
-const TMP = path.join(os.tmpdir(), 'oneshot-worktree-test');
+const TMP = path.join(require('fs').realpathSync(os.tmpdir()), 'oneshot-worktree-test');
 const DATA = path.join(TMP, 'data');
 
 function initBareOrigin(dir) {
