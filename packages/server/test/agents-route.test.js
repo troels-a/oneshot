@@ -138,15 +138,17 @@ describe('agent CRUD runtime validation', () => {
     assert.strictEqual(res.body.runtimeOptions.sandboxMode, 'danger-full-access');
   });
 
-  it('lists runtime metadata alongside agents', async () => {
-    const agentsDir = path.join(TMP, 'agents-list-runtimes');
-    writeAgent(agentsDir, 'noop', '---\nruntime: bash\n---\nbody');
+  it('rejects invalid runtime with descriptive error', async () => {
+    const agentsDir = path.join(TMP, 'agents-invalid-runtime');
+    mkdirSync(agentsDir, { recursive: true });
     const app = makeApp(fakeManager(), agentsDir);
 
-    const res = await request(app).get('/agents');
+    const res = await request(app)
+      .post('/agents')
+      .send({ name: 'bad-agent', runtime: 'python', body: 'test' });
 
-    assert.strictEqual(res.status, 200);
-    assert.ok(Array.isArray(res.body.runtimes));
-    assert.ok(res.body.runtimes.some(runtime => runtime.name === 'codex'));
+    assert.strictEqual(res.status, 400);
+    assert.ok(res.body.error.includes('Must be one of:'));
+    assert.ok(res.body.error.includes('claude'));
   });
 });
