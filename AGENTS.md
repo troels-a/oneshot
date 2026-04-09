@@ -140,6 +140,37 @@ curl -X POST http://localhost:3000/agents/my-agent/schedules \
 
 Only one instance of an agent runs at a time. Scheduled runs are skipped if the previous run is still executing. To allow concurrent runs, set `multi_instance: true` in the agent's frontmatter.
 
+### Spawning
+
+Agents can spawn follow-up agents by writing JSON files to `$ONESHOT_SPAWN_DIR`. This environment variable is set automatically for every run and points to a run-specific directory (`<logDir>/spawns/`). After the current run completes and its worktree is cleaned up, the run manager reads all `.json` files from the spawn dir and dispatches each one.
+
+```bash
+cat > "$ONESHOT_SPAWN_DIR/next-agent.json" << 'SPAWN'
+{
+  "agent": "next-agent-name",
+  "args": { "key": "value" },
+  "path": "repo-name"
+}
+SPAWN
+```
+
+- `agent` (required) — name of the agent to dispatch next
+- `args` — arguments to pass to the spawned agent
+- `path` — working directory path (defaults to the current run's path)
+- `timeout` — optional timeout in seconds
+
+Multiple spawn files can be written to dispatch multiple agents. Both `path` and `branch` must be explicitly set — nothing is inherited from the parent run. Use `$ONESHOT_PATH` and `$ONESHOT_BRANCH` env vars to pass them through. The spawned run records `spawnedBy` and the parent records `spawned` for traceability.
+
+### Run Environment Variables
+
+Every agent run receives these environment variables:
+
+- `ONESHOT_SPAWN_DIR` — path to the run-specific spawns directory
+- `ONESHOT_RUN_ID` — the current run's ID
+- `ONESHOT_AGENT` — the current agent's name
+- `ONESHOT_PATH` — the resolved path option (if set)
+- `ONESHOT_BRANCH` — the worktree branch (if worktree mode is active)
+
 ## Development
 
 ```bash

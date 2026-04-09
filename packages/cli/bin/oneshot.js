@@ -42,6 +42,12 @@ if (command === 'info') {
     console.log(`Agent: ${name}`);
     console.log(`Runtime: ${config.runtime}`);
     console.log(`Worktree: ${config.worktree}`);
+    if (config.runtimeOptions && Object.keys(config.runtimeOptions).length) {
+      console.log('\nRuntime options:');
+      for (const [key, value] of Object.entries(config.runtimeOptions)) {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
     if (config.args.length) {
       console.log('\nArguments:');
       for (const arg of config.args) {
@@ -68,7 +74,7 @@ if (command === 'info') {
 if (command === 'clear') {
   const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
   const runs = manager.listRuns({});
-  const clearable = runs.filter(r => r.status === 'completed' || r.status === 'failed');
+  const clearable = runs.filter(r => r.status !== 'running' && r.status !== 'pending');
 
   if (clearable.length === 0) {
     console.log('No completed or failed runs to clear.');

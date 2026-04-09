@@ -38,6 +38,12 @@ export async function fetchAgents() {
   return data.agents;
 }
 
+export async function fetchRuntimes() {
+  const res = await request('/runtimes');
+  const data = await res.json();
+  return data.runtimes;
+}
+
 export async function fetchRuns(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
@@ -57,8 +63,13 @@ export async function fetchRunLogs(id) {
   return res.json();
 }
 
-export async function fetchLogContent(runId, filename, { offset = 0, limit = 50 } = {}) {
-  const res = await request(`/runs/${runId}/logs/${filename}?offset=${offset}&limit=${limit}`);
+export async function fetchLogContent(runId, filename) {
+  const res = await request(`/runs/${runId}/logs/${filename}`);
+  return res.json();
+}
+
+export async function fetchLogTail(runId, filename, after) {
+  const res = await request(`/runs/${runId}/logs/${filename}/tail?after=${after}`);
   return res.json();
 }
 
@@ -72,6 +83,21 @@ export async function fetchAllSchedules() {
   const res = await request('/schedules');
   const data = await res.json();
   return data.schedules;
+}
+
+export async function updateSchedule(agent, scheduleId, data) {
+  const res = await request(`/agents/${agent}/schedules/${scheduleId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteSchedule(agent, scheduleId) {
+  await request(`/agents/${agent}/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function clearRuns() {

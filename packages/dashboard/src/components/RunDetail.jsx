@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { fetchRun, fetchRunLogs, fetchLogContent } from '../api';
+import { useState, useEffect, useRef } from 'react';
+import { fetchRun, fetchRunLogs, fetchLogContent, fetchLogTail } from '../api';
+import { parseRuntimeLogLines } from '../runtime-log-renderers';
 
-const PAGE_SIZE = 50;
+const LOG_LABELS = { 'stdout.log': 'Logs', 'stderr.log': 'Errors' };
+const TAIL_INTERVAL = 3000;
 
 export default function RunDetail({ runId, onBack }) {
   const [run, setRun] = useState(null);
@@ -9,21 +11,14 @@ export default function RunDetail({ runId, onBack }) {
   const [entries, setEntries] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [error, setError] = useState('');
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const offsetRef = useRef(0);
+  const lastLineRef = useRef(0);
   const timelineRef = useRef(null);
 
-  async function loadPage(filename, offset, append = false) {
-    const data = await fetchLogContent(runId, filename, { offset, limit: PAGE_SIZE });
-    const parsed = parseLines(data.lines);
-    if (append) {
-      setEntries(prev => [...prev, ...parsed]);
-    } else {
-      setEntries(parsed);
-    }
-    offsetRef.current = offset + data.lines.length;
-    setHasMore(data.hasMore);
+  async function loadAll(filename) {
+    const data = await fetchLogContent(runId, filename);
+    const parsed = parseRuntimeLogLines(data.lines, run?.runtime);
+    setEntries(parsed);
+    lastLineRef.current = data.offset + data.lines.length;
   }
 
   useEffect(() => {
@@ -40,10 +35,10 @@ export default function RunDetail({ runId, onBack }) {
         setLogFiles(logsData.files || []);
 
         if (logsData.files?.length && !selectedLog) {
-          const first = logsData.files[0].name;
+          const first = logsData.files.find(f => f.name === 'stdout.log')?.name || logsData.files[0].name;
           setSelectedLog(first);
-          offsetRef.current = 0;
-          await loadPage(first, 0);
+          lastLineRef.current = 0;
+          await loadAll(first);
         }
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -60,29 +55,34 @@ export default function RunDetail({ runId, onBack }) {
     return () => { cancelled = true; clearInterval(interval); };
   }, [runId]);
 
+  // Poll for new log lines while run is active
+  useEffect(() => {
+    if (!run || run.status !== 'running' || !selectedLog) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchLogTail(runId, selectedLog, lastLineRef.current);
+        if (data.lines.length > 0) {
+          const newEntries = parseRuntimeLogLines(data.lines, run?.runtime);
+          setEntries(prev => [...newEntries, ...prev]);
+          lastLineRef.current = data.lastLine;
+        }
+      } catch {}
+    }, TAIL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [run?.status, selectedLog, runId]);
+
   async function selectLog(filename) {
     setSelectedLog(filename);
     setEntries([]);
-    offsetRef.current = 0;
-    setHasMore(false);
+    lastLineRef.current = 0;
     try {
-      await loadPage(filename, 0);
+      await loadAll(filename);
     } catch (err) {
       setEntries([{ type: 'error', label: 'error', summary: `Error: ${err.message}` }]);
     }
   }
-
-  const handleScroll = useCallback(async () => {
-    const el = timelineRef.current;
-    if (!el || loadingMore || !hasMore || !selectedLog) return;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-      setLoadingMore(true);
-      try {
-        await loadPage(selectedLog, offsetRef.current, true);
-      } catch {}
-      setLoadingMore(false);
-    }
-  }, [loadingMore, hasMore, selectedLog, runId]);
 
   if (error) return <div className="error-box">{error}</div>;
   if (!run) return <div className="loading">Loading...</div>;
@@ -102,7 +102,25 @@ export default function RunDetail({ runId, onBack }) {
           <div><strong>Completed:</strong> {run.completedAt ? new Date(run.completedAt).toLocaleString() : '-'}</div>
           <div><strong>Exit Code:</strong> {run.exitCode ?? '-'}</div>
           {run.signal && <div><strong>Signal:</strong> {run.signal}</div>}
+          {(run.cwd || run.options?.path) && (
+            <div><strong>Path:</strong> <span className="mono">{run.cwd || run.options.path}</span></div>
+          )}
+          {run.worktree?.dir && (
+            <div><strong>Worktree:</strong> <span className="mono">{run.worktree.dir}</span></div>
+          )}
+          {run.options?.branch && <div><strong>Branch:</strong> <span className="mono">{run.options.branch}</span></div>}
+          {run.options?.timeout && <div><strong>Timeout:</strong> {run.options.timeout}s</div>}
         </div>
+        {run.options?.args && Object.keys(run.options.args).length > 0 && (
+          <dl className="run-args">
+            {Object.entries(run.options.args).map(([key, value]) => (
+              <div key={key} className="run-arg">
+                <dt>{key}</dt>
+                <dd className="mono">{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
 
       {run.result && (
@@ -135,22 +153,18 @@ export default function RunDetail({ runId, onBack }) {
                     className={`tab ${selectedLog === f.name ? 'tab-active' : ''}`}
                     onClick={() => selectLog(f.name)}
                   >
-                    {f.name} <span className="log-size">({formatSize(f.size)})</span>
+                    {LOG_LABELS[f.name] || f.name} <span className="log-size">({formatSize(f.size)})</span>
                   </button>
                 ))}
               </div>
             )}
-            <div className="timeline" ref={timelineRef} onScroll={handleScroll}>
+            <div className="timeline" ref={timelineRef}>
               {entries.length === 0 ? (
                 <p className="empty">Empty log</p>
               ) : (
                 entries.map((entry, i) => (
                   <TimelineEntry key={i} entry={entry} />
                 ))
-              )}
-              {loadingMore && <div className="loading">Loading more...</div>}
-              {hasMore && !loadingMore && (
-                <div className="loading" style={{ padding: '12px', fontSize: '12px' }}>Scroll for more</div>
               )}
             </div>
           </>
@@ -177,6 +191,13 @@ function TimelineEntry({ entry }) {
         {entry.cost != null && (
           <div className="timeline-cost">${entry.cost.toFixed(4)}</div>
         )}
+        {entry.metadata?.length > 0 && (
+          <div className="timeline-metadata">
+            {entry.metadata.map((item, index) => (
+              <span key={`${item}-${index}`} className="timeline-meta-chip">{item}</span>
+            ))}
+          </div>
+        )}
       </div>
       {entry.detail && (
         <>
@@ -188,143 +209,6 @@ function TimelineEntry({ entry }) {
       )}
     </div>
   );
-}
-
-function parseLines(lines) {
-  const entries = [];
-  for (const line of lines) {
-    if (!line) continue;
-    let obj;
-    try {
-      obj = JSON.parse(line);
-    } catch {
-      entries.push({ type: 'system', label: 'raw', summary: line });
-      continue;
-    }
-    const entry = parseEntry(obj);
-    if (!entry) continue;
-    if (Array.isArray(entry)) entries.push(...entry);
-    else entries.push(entry);
-  }
-  return entries;
-}
-
-function parseEntry(obj) {
-  const type = obj.type;
-
-  if (type === 'system' && obj.subtype === 'init') {
-    return {
-      type: 'system',
-      label: 'init',
-      summary: `Session started in ${obj.cwd || 'unknown'}`,
-      detail: [
-        `Model: ${obj.model || '?'}`,
-        `Tools: ${obj.tools?.length || 0} loaded`,
-        `MCP: ${obj.mcp_servers?.filter(s => s.status === 'connected').length || 0}/${obj.mcp_servers?.length || 0} connected`,
-        `Plugins: ${obj.plugins?.map(p => p.name).join(', ') || 'none'}`,
-      ].join('\n'),
-    };
-  }
-
-  if (type === 'system' && obj.subtype === 'hook_started') {
-    return {
-      type: 'system',
-      label: 'hook',
-      summary: `Hook: ${obj.hook_name || obj.hook_event || 'unknown'}`,
-    };
-  }
-
-  if (type === 'system' && obj.subtype === 'hook_response') {
-    const ok = obj.exit_code === 0 || obj.outcome === 'success';
-    return {
-      type: ok ? 'system' : 'error',
-      label: ok ? 'hook ok' : 'hook fail',
-      summary: `${obj.hook_name || 'Hook'} ${ok ? 'completed' : 'failed'}`,
-    };
-  }
-
-  if (type === 'assistant' && obj.message) {
-    const msg = obj.message;
-    const textParts = (msg.content || []).filter(c => c.type === 'text');
-    const toolParts = (msg.content || []).filter(c => c.type === 'tool_use');
-    const thinkParts = (msg.content || []).filter(c => c.type === 'thinking');
-
-    const parts = [];
-
-    if (thinkParts.length) {
-      const thinking = thinkParts.map(t => t.thinking).join('\n');
-      if (thinking.length > 0) {
-        parts.push({ type: 'system', label: 'thinking', summary: truncate(thinking, 120), detail: thinking.length > 120 ? thinking : null });
-      }
-    }
-
-    if (textParts.length) {
-      const text = textParts.map(t => t.text).join('\n');
-      parts.push({ type: 'assistant', label: 'response', summary: truncate(text, 200), detail: text.length > 200 ? text : null });
-    }
-
-    for (const tool of toolParts) {
-      const input = typeof tool.input === 'string' ? tool.input : JSON.stringify(tool.input, null, 2);
-      parts.push({
-        type: 'tool',
-        label: tool.name || 'tool',
-        summary: describeToolUse(tool),
-        detail: input,
-      });
-    }
-
-    return parts.length === 1 ? parts[0] : parts.length > 1 ? parts : null;
-  }
-
-  if (type === 'result') {
-    return {
-      type: obj.is_error ? 'error' : 'result',
-      label: obj.is_error ? 'error' : 'done',
-      summary: truncate(obj.result || `Completed in ${obj.num_turns || '?'} turns`, 200),
-      cost: obj.total_cost_usd,
-      detail: obj.result && obj.result.length > 200 ? obj.result : null,
-      time: obj.duration_ms ? `${(obj.duration_ms / 1000).toFixed(1)}s` : null,
-    };
-  }
-
-  if (type === 'tool_result') {
-    return {
-      type: obj.is_error ? 'error' : 'system',
-      label: obj.is_error ? 'error' : 'tool result',
-      summary: truncate(typeof obj.content === 'string' ? obj.content : JSON.stringify(obj.content), 150),
-      detail: typeof obj.content === 'string' && obj.content.length > 150 ? obj.content : null,
-    };
-  }
-
-  if (type === 'rate_limit_event') return null;
-
-  return {
-    type: 'system',
-    label: obj.subtype || type || '?',
-    summary: truncate(JSON.stringify(obj), 100),
-  };
-}
-
-function describeToolUse(tool) {
-  const name = tool.name || 'unknown';
-  const input = tool.input || {};
-
-  if (name === 'Read') return `Read ${input.file_path || '?'}`;
-  if (name === 'Write') return `Write ${input.file_path || '?'}`;
-  if (name === 'Edit') return `Edit ${input.file_path || '?'}`;
-  if (name === 'Bash') return `$ ${truncate(input.command || '?', 80)}`;
-  if (name === 'Glob') return `Glob ${input.pattern || '?'}`;
-  if (name === 'Grep') return `Grep "${truncate(input.pattern || '?', 40)}"`;
-  if (name === 'WebFetch') return `Fetch ${input.url || '?'}`;
-  if (name === 'WebSearch') return `Search "${input.query || '?'}"`;
-  if (name === 'Task' || name === 'Agent') return `Spawn ${input.description || 'agent'}`;
-
-  return name;
-}
-
-function truncate(str, max) {
-  if (!str) return '';
-  return str.length > max ? str.slice(0, max) + '...' : str;
 }
 
 function formatSize(bytes) {

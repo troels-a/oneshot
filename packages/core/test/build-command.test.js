@@ -23,6 +23,12 @@ describe('buildCommand', () => {
     assert.ok(args.includes('--output-format'));
   });
 
+  it('builds codex exec command', () => {
+    const { cmd, args } = buildCommand('codex', agentDir, 'do stuff', {});
+    assert.strictEqual(cmd, 'codex');
+    assert.deepStrictEqual(args, ['-a', 'never', 'exec', '--skip-git-repo-check', '--json', '-s', 'workspace-write', 'do stuff']);
+  });
+
   it('builds node command with temp file', () => {
     const script = 'console.log("hello");';
     const { cmd, args, cleanup } = buildCommand('node', agentDir, script, { foo: 'bar' });
@@ -47,6 +53,26 @@ describe('buildCommand', () => {
     assert.ok(args.includes('1'));
     cleanup();
     assert.ok(!existsSync(args[0]));
+  });
+
+  it('builds codex command with runtime options', () => {
+    const { cmd, args } = buildCommand('codex', agentDir, 'review the code', {}, {
+      approvalPolicy: 'never',
+      sandboxMode: 'danger-full-access',
+      webSearch: true,
+    });
+    assert.strictEqual(cmd, 'codex');
+    assert.deepStrictEqual(args, [
+      '-a',
+      'never',
+      '--search',
+      'exec',
+      '--skip-git-repo-check',
+      '--json',
+      '-s',
+      'danger-full-access',
+      'review the code',
+    ]);
   });
 
   it('throws on unknown runtime', () => {

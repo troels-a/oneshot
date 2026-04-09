@@ -568,6 +568,11 @@ body::after,
   color: var(--yellow);
 }
 
+.badge-timed_out {
+  background: var(--orange-bg);
+  color: var(--orange);
+}
+
 /* ---- Tabs (for sub-navigation) ---- */
 .tabs {
   display: flex;
@@ -725,6 +730,35 @@ body::after,
 
 .run-meta strong {
   color: var(--text-muted);
+}
+
+.run-args {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.run-arg {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.run-arg dt {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.run-arg dd {
+  margin: 0;
+  word-break: break-word;
+  min-width: 0;
 }
 
 /* ---- Clear button ---- */
@@ -885,6 +919,24 @@ body::after,
   font-size: 13px;
   line-height: 1.5;
   color: var(--text);
+}
+
+.timeline-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.timeline-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .timeline-detail {
@@ -1351,4 +1403,79 @@ body::after,
   .login-card {
     padding: 28px 20px;
   }
+}
+
+/* ---- Schedule edit form ---- */
+.schedule-edit-form {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-edit-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.schedule-edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.schedule-edit-input:focus {
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.schedule-edit-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.schedule-edit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.schedule-edit-error {
+  font-size: 12px;
+  color: var(--red);
+}
+
+.schedule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.schedule-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
+  cursor: pointer;
 }

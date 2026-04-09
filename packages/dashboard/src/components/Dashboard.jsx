@@ -57,7 +57,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   if (clampedPage !== page) setPage(clampedPage);
   const start = clampedPage * PAGE_SIZE;
   const pagedRuns = runs.slice(start, start + PAGE_SIZE);
-  const hasClearable = runs.some(r => r.status === 'completed' || r.status === 'failed');
+  const hasClearable = runs.some(r => r.status !== 'running' && r.status !== 'pending');
 
   if (loading) return <div className="loading">Loading...</div>;
 
@@ -153,7 +153,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
             <div className="run-card-list">
               {schedules.map((s) => (
                 <div key={s.id} className={`run-card-wrapper ${s.enabled ? 'status-completed' : ''}`}>
-                  <ScheduleCard schedule={s} />
+                  <ScheduleCard schedule={s} onUpdate={() => fetchAllSchedules().then(all => setSchedules(all))} />
                 </div>
               ))}
             </div>

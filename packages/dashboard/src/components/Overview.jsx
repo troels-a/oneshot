@@ -26,6 +26,7 @@ function statusLabel(status) {
     running: { label: 'Live', cls: 'badge-running' },
     completed: { label: 'Done', cls: 'badge-completed' },
     failed: { label: 'Failed', cls: 'badge-failed' },
+    timed_out: { label: 'Timed out', cls: 'badge-timed_out' },
     pending: { label: 'Pending', cls: 'badge-pending' },
   };
   const { label, cls } = map[status] || { label: status, cls: '' };
