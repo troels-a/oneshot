@@ -8,6 +8,7 @@ const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
 const agentsRouter = require('./routes/agents');
+const runtimesRouter = require('./routes/runtimes');
 const runsRouter = require('./routes/runs');
 const schedulesRouter = require('./routes/schedules');
 const statsRouter = require('./routes/stats');
@@ -47,6 +48,7 @@ function createApp(options = {}) {
   });
 
   app.use(agentsRouter);
+  app.use(runtimesRouter);
   app.use(schedulesRouter);
   app.use(runsRouter);
   app.use(statsRouter);

@@ -1,12 +1,11 @@
 const { Router } = require('express');
 const path = require('path');
 const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
-const { discoverAgents, parseAgentMd, serializeAgentMd } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimeMetadata } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 
 const VALID_NAME = /^[a-zA-Z0-9_-]+$/;
-const VALID_RUNTIMES = new Set(['claude', 'node', 'bash', 'codex']);
 
 const router = Router();
 
@@ -16,8 +15,9 @@ router.get('/agents', (req, res) => {
     runtime: a.config.runtime,
     args: a.config.args,
     worktree: a.config.worktree,
+    runtimeOptions: a.config.runtimeOptions,
   }));
-  res.json({ agents });
+  res.json({ agents, runtimes: listRuntimeMetadata() });
 });
 
 router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) => {
@@ -65,17 +65,18 @@ router.get('/agents/:agent', validateParams, (req, res) => {
     commands: config.commands,
     body: config.body,
     worktree: config.worktree,
+    runtimeOptions: config.runtimeOptions,
   });
 });
 
 router.post('/agents', (req, res) => {
-  const { name, runtime, args, commands, body, worktree } = req.body;
+  const { name, runtime, args, commands, body, worktree, runtimeOptions } = req.body;
 
   if (!name || !VALID_NAME.test(name)) {
     return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
   }
-  if (!runtime || !VALID_RUNTIMES.has(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash, codex' });
+  if (!runtime || !isValidRuntime(runtime)) {
+    return res.status(400).json({ error: 'Invalid runtime' });
   }
 
   const agentDir = path.join(req.agentsDir, name);
@@ -83,11 +84,11 @@ router.post('/agents', (req, res) => {
     return res.status(409).json({ error: 'Agent already exists' });
   }
 
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, runtimeOptions: runtimeOptions || {} });
   mkdirSync(agentDir, { recursive: true });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  res.status(201).json({ name, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, runtimeOptions: runtimeOptions || {} });
 });
 
 router.put('/agents/:agent', validateParams, (req, res) => {
@@ -98,14 +99,14 @@ router.put('/agents/:agent', validateParams, (req, res) => {
     return res.status(404).json({ error: 'Agent not found' });
   }
 
-  const { runtime, args, commands, body, worktree } = req.body;
-  if (!runtime || !VALID_RUNTIMES.has(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime. Must be one of: claude, node, bash, codex' });
+  const { runtime, args, commands, body, worktree, runtimeOptions } = req.body;
+  if (!runtime || !isValidRuntime(runtime)) {
+    return res.status(400).json({ error: 'Invalid runtime' });
   }
-  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, runtimeOptions: runtimeOptions || {} });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');
 
-  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree });
+  res.json({ name: agent, runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, runtimeOptions: runtimeOptions || {} });
 });
 
 router.delete('/agents/:agent', validateParams, (req, res) => {

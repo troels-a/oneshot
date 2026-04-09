@@ -38,20 +38,21 @@ function extractResult(logDir, runtime) {
     let result = null;
     let meta = null;
 
-    for (const line of lines) {
+    for (let i = lines.length - 1; i >= 0; i--) {
       try {
-        const obj = JSON.parse(line);
-
-        if (obj.type === 'item.completed' && obj.item?.type === 'agent_message') {
-          result = obj.item.text || null;
-        }
-
-        if (obj.type === 'turn.completed') {
+        const obj = JSON.parse(lines[i]);
+        if (!meta && obj.type === 'turn.completed' && obj.usage) {
           meta = {
-            input_tokens: obj.usage?.input_tokens ?? null,
-            cached_input_tokens: obj.usage?.cached_input_tokens ?? null,
-            output_tokens: obj.usage?.output_tokens ?? null,
+            input_tokens: obj.usage.input_tokens ?? null,
+            cached_input_tokens: obj.usage.cached_input_tokens ?? null,
+            output_tokens: obj.usage.output_tokens ?? null,
           };
+        }
+        if (!result && obj.type === 'item.completed' && obj.item?.type === 'agent_message' && obj.item.text) {
+          result = obj.item.text;
+        }
+        if (result && meta) {
+          return { result, meta };
         }
       } catch {
         continue;
