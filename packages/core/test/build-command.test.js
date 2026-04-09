@@ -23,6 +23,12 @@ describe('buildCommand', () => {
     assert.ok(args.includes('--output-format'));
   });
 
+  it('builds codex exec command', () => {
+    const { cmd, args } = buildCommand('codex', agentDir, 'do stuff', {});
+    assert.strictEqual(cmd, 'codex');
+    assert.deepStrictEqual(args, ['exec', '--skip-git-repo-check', '--full-auto', '--json', 'do stuff']);
+  });
+
   it('builds node command with temp file', () => {
     const script = 'console.log("hello");';
     const { cmd, args, cleanup } = buildCommand('node', agentDir, script, { foo: 'bar' });
