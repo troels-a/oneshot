@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const path = require('path');
 const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
-const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimeMetadata } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimes } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 
@@ -17,7 +17,7 @@ router.get('/agents', (req, res) => {
     worktree: a.config.worktree,
     runtimeOptions: a.config.runtimeOptions,
   }));
-  res.json({ agents, runtimes: listRuntimeMetadata() });
+  res.json({ agents });
 });
 
 router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) => {
@@ -76,7 +76,8 @@ router.post('/agents', (req, res) => {
     return res.status(400).json({ error: 'Invalid agent name. Must match /^[a-zA-Z0-9_-]+$/' });
   }
   if (!runtime || !isValidRuntime(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime' });
+    const valid = listRuntimes().map(r => r.name).join(', ');
+    return res.status(400).json({ error: `Invalid runtime. Must be one of: ${valid}` });
   }
 
   const agentDir = path.join(req.agentsDir, name);
@@ -101,7 +102,8 @@ router.put('/agents/:agent', validateParams, (req, res) => {
 
   const { runtime, args, commands, body, worktree, runtimeOptions } = req.body;
   if (!runtime || !isValidRuntime(runtime)) {
-    return res.status(400).json({ error: 'Invalid runtime' });
+    const valid = listRuntimes().map(r => r.name).join(', ');
+    return res.status(400).json({ error: `Invalid runtime. Must be one of: ${valid}` });
   }
   const content = serializeAgentMd({ runtime, args: args || [], commands: commands || [], body: body || '', worktree: !!worktree, runtimeOptions: runtimeOptions || {} });
   writeFileSync(path.join(agentDir, 'agent.md'), content, 'utf8');

@@ -1,72 +1,29 @@
 const path = require('path');
 const { readFileSync, existsSync } = require('fs');
+const { getRuntime } = require('./runtimes');
 
 const MAX_RESULT_SIZE = 50000;
 
-function extractResult(logDir, runtime) {
+function defaultExtractResult(content) {
+  const trimmed = content.length > MAX_RESULT_SIZE
+    ? content.slice(-MAX_RESULT_SIZE)
+    : content;
+  return { result: trimmed, meta: null };
+}
+
+function extractResult(logDir, runtimeName) {
   const stdoutPath = path.join(logDir, 'stdout.log');
   if (!existsSync(stdoutPath)) return { result: null, meta: null };
 
   const content = readFileSync(stdoutPath, 'utf8');
   if (!content.trim()) return { result: null, meta: null };
 
-  if (runtime === 'claude') {
-    const lines = content.trimEnd().split('\n');
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try {
-        const obj = JSON.parse(lines[i]);
-        if (obj.type === 'result') {
-          return {
-            result: obj.result || null,
-            meta: {
-              cost: obj.total_cost_usd ?? null,
-              duration_ms: obj.duration_ms ?? null,
-              num_turns: obj.num_turns ?? null,
-              is_error: obj.is_error ?? false,
-            },
-          };
-        }
-      } catch {
-        continue;
-      }
-    }
-    return { result: null, meta: null };
+  const runtime = getRuntime(runtimeName);
+  if (runtime && typeof runtime.extractResult === 'function') {
+    return runtime.extractResult(content);
   }
 
-  if (runtime === 'codex') {
-    const lines = content.trimEnd().split('\n');
-    let result = null;
-    let meta = null;
-
-    for (let i = lines.length - 1; i >= 0; i--) {
-      try {
-        const obj = JSON.parse(lines[i]);
-        if (!meta && obj.type === 'turn.completed' && obj.usage) {
-          meta = {
-            input_tokens: obj.usage.input_tokens ?? null,
-            cached_input_tokens: obj.usage.cached_input_tokens ?? null,
-            output_tokens: obj.usage.output_tokens ?? null,
-          };
-        }
-        if (!result && obj.type === 'item.completed' && obj.item?.type === 'agent_message' && obj.item.text) {
-          result = obj.item.text;
-        }
-        if (result && meta) {
-          return { result, meta };
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    return { result, meta };
-  }
-
-  // node / bash — stdout is the result
-  const trimmed = content.length > MAX_RESULT_SIZE
-    ? content.slice(-MAX_RESULT_SIZE)
-    : content;
-  return { result: trimmed, meta: null };
+  return defaultExtractResult(content);
 }
 
 module.exports = extractResult;

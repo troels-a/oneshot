@@ -31,7 +31,7 @@ function normalizeRuntimeOptions(name, runtimeOptions = {}) {
   if (!runtime) {
     throw new Error(`Unknown runtime: ${name}`);
   }
-  return runtime.normalizeRuntimeOptions(runtimeOptions || {});
+  return runtime.normalizeRuntimeOptions(runtimeOptions);
 }
 
 module.exports = {
