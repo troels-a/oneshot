@@ -216,14 +216,14 @@ describe('dispatch rejects unavailable runtime', () => {
   });
 
   it('returns 400 when runtime is unavailable', async (t) => {
-    const core = require('@oneshot/core');
+    const core = require('../src/lib/core');
     const originalFn = core.checkRuntimeAvailability;
-    core.checkRuntimeAvailability = async () => ({
-      bash: { available: false, reason: 'bash CLI not found in PATH' },
-      claude: { available: false, reason: 'claude CLI not found in PATH' },
-      codex: { available: false, reason: 'codex CLI not found in PATH' },
-      node: { available: false, reason: 'node CLI not found in PATH' },
-    });
+    core.checkRuntimeAvailability = async (name) => {
+      if (name !== 'bash') {
+        throw new Error(`Unexpected runtime lookup: ${name}`);
+      }
+      return { available: false, reason: 'bash CLI not found in PATH' };
+    };
 
     const routerPath = require.resolve('../src/routes/agents');
     delete require.cache[routerPath];

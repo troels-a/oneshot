@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const path = require('path');
 const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
-const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimes, checkRuntimeAvailability } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimes, checkRuntimeAvailability } = require('../lib/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 

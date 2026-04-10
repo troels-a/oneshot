@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { listRuntimeMetadata, checkRuntimeAvailability } = require('@oneshot/core');
+const { listRuntimeMetadata, checkRuntimeAvailability } = require('../lib/core');
 
 const router = Router();
 
