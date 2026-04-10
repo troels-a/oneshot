@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const path = require('path');
 const { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } = require('fs');
-const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimes } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, serializeAgentMd, isValidRuntime, listRuntimes, checkRuntimeAvailability } = require('@oneshot/core');
 const validateParams = require('../middleware/validate-params');
 const { validateBody, coerceDispatchBody } = require('../lib/validate-dispatch-options');
 
@@ -34,6 +34,13 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
 
     const agentMdPath = path.join(req.agentsDir, req.params.agent, 'agent.md');
     const config = parseAgentMd(agentMdPath);
+
+    const runtimeStatus = await checkRuntimeAvailability(config.runtime);
+    if (runtimeStatus && !runtimeStatus.available) {
+      return res.status(400).json({
+        error: `Runtime ${config.runtime} is not available: ${runtimeStatus.reason}`
+      });
+    }
 
     if (!config.multi_instance) {
       const existing = manager.getRunningRun(agent);
