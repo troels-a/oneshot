@@ -1,4 +1,4 @@
-const { buildPromptEditor, normalizeOptionFields } = require('./utils');
+const { buildPromptEditor, normalizeOptionFields, checkBinary } = require('./utils');
 
 const runtimeOptions = [
   {
@@ -45,6 +45,9 @@ const runtimeOptions = [
 module.exports = {
   name: 'codex',
   label: 'Codex',
+  async checkAvailability() {
+    return checkBinary('codex');
+  },
   editor: buildPromptEditor(
     'Prompt',
     'Supports {{ args.* }} and {{ commands.* }} templates',

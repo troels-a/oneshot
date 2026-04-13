@@ -1,6 +1,9 @@
 const path = require('path');
 const os = require('os');
 const { writeFileSync, unlinkSync } = require('fs');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const execFileAsync = promisify(execFile);
 
 function argsToFlags(args) {
   const flags = [];
@@ -50,9 +53,19 @@ function buildPromptEditor(title, hint, placeholder) {
   return { title, hint, placeholder };
 }
 
+async function checkBinary(name) {
+  try {
+    await execFileAsync('which', [name]);
+    return { available: true };
+  } catch {
+    return { available: false, reason: `${name} CLI not found in PATH` };
+  }
+}
+
 module.exports = {
   argsToFlags,
   createTempExecutable,
   normalizeOptionFields,
   buildPromptEditor,
+  checkBinary,
 };

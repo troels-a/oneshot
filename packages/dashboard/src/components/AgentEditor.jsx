@@ -217,6 +217,8 @@ export default function AgentEditor({ agentName, onBack }) {
                 <button
                   key={r.name}
                   className={`runtime-option ${runtime === r.name ? 'active' : ''}`}
+                  disabled={r.available === false}
+                  title={r.available === false ? r.availabilityReason : undefined}
                   onClick={() => {
                     setRuntime(r.name);
                     setRuntimeOptions(getDefaultRuntimeOptions(r.name));
