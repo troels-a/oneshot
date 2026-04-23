@@ -17,4 +17,17 @@ describe('GET /runtimes', () => {
     const codex = res.body.runtimes.find(runtime => runtime.name === 'codex');
     assert.ok(codex.runtimeOptions.some(option => option.name === 'sandboxMode'));
   });
+
+  it('includes available and availabilityReason fields on each runtime', async () => {
+    const app = express();
+    app.use(runtimesRouter);
+
+    const res = await request(app).get('/runtimes');
+
+    assert.strictEqual(res.status, 200);
+    for (const runtime of res.body.runtimes) {
+      assert.strictEqual(typeof runtime.available, 'boolean', `${runtime.name} missing available field`);
+      assert.ok('availabilityReason' in runtime, `${runtime.name} missing availabilityReason field`);
+    }
+  });
 });
