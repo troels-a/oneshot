@@ -301,10 +301,25 @@ class RunManager {
     }
     if (!files.length) return;
 
+    // Build substitution map for $ONESHOT_* env var references that agents
+    // may have written literally into spawn files (e.g. claude runtime agents
+    // that write JSON via tools instead of shell heredocs).
+    const envSubs = {
+      $ONESHOT_PATH: parentRun.options?.path,
+      $ONESHOT_BRANCH: parentRun.options?.branch || parentRun.worktree?.branch,
+      $ONESHOT_RUN_ID: parentRun.id,
+      $ONESHOT_AGENT: parentRun.agentName,
+    };
+
     const spawned = [];
     for (const file of files) {
       try {
-        const req = JSON.parse(readFileSync(path.join(spawnDir, file), 'utf8'));
+        const raw = readFileSync(path.join(spawnDir, file), 'utf8');
+        // Substitute $ONESHOT_* references before parsing
+        const resolved = raw.replace(/\$ONESHOT_\w+/g, (match) =>
+          envSubs[match] != null ? envSubs[match] : match
+        );
+        const req = JSON.parse(resolved);
         if (!req.agent) continue;
         const opts = {
           ...pickDispatchOptions(req),
@@ -315,7 +330,9 @@ class RunManager {
             spawnedRun.spawnedBy = parentRun.id;
             this._persistRun(spawnedRun);
           })
-          .catch(() => {});
+          .catch((err) => {
+            console.error(`[spawn] failed to dispatch ${req.agent} from ${parentRun.id}: ${err.message}`);
+          });
         spawned.push({ agent: req.agent, file });
       } catch {}
     }
