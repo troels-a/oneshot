@@ -323,6 +323,38 @@ exit 7
       assert.strictEqual(dispatched[0].opts.timeout, 600);
     });
 
+    it('substitutes $ONESHOT_* env var references in spawn JSON', async () => {
+      const { manager, root } = makeManager('processSpawns-envsubst');
+      const dispatched = [];
+      manager.dispatchRun = (agent, opts) => {
+        dispatched.push({ agent, opts });
+        return Promise.resolve({ run: {}, child: null, done: Promise.resolve() });
+      };
+
+      const parentLogDir = path.join(root, 'fake-parent');
+      const spawnDir = path.join(parentLogDir, 'spawns');
+      mkdirSync(spawnDir, { recursive: true });
+      writeFileSync(path.join(spawnDir, 'next.json'), JSON.stringify({
+        agent: 'child',
+        path: '$ONESHOT_PATH',
+        branch: '$ONESHOT_BRANCH',
+        args: { task: 'go' },
+      }));
+
+      const fakeParent = {
+        id: 'parent-env',
+        logDir: parentLogDir,
+        agentName: 'planner',
+        options: { path: 'my-repo', branch: 'feat/thing' },
+      };
+      manager._processSpawns(fakeParent, {});
+      await new Promise((r) => setImmediate(r));
+
+      assert.strictEqual(dispatched.length, 1);
+      assert.strictEqual(dispatched[0].opts.path, 'my-repo');
+      assert.strictEqual(dispatched[0].opts.branch, 'feat/thing');
+    });
+
     it('does not forward unknown keys from spawn JSON', async () => {
       const { manager, root } = makeManager('processSpawns-unknown');
       const dispatched = [];
