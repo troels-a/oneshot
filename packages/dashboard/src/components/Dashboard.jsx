@@ -114,7 +114,12 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       {tab === 'agents' && (
         <div>
           {agents.length === 0 ? (
-            <p className="empty">No agents found</p>
+            <div className="empty">
+              <p>No agents found</p>
+              <button className="btn btn-glass" onClick={() => onSelectAgent('__new__')}>
+                Create one now!
+              </button>
+            </div>
           ) : (
             <div className="agent-grid">
               {agents.map((agent) => {
