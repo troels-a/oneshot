@@ -1,4 +1,4 @@
-const { argsToFlags, createTempExecutable } = require('./utils');
+const { argsToFlags, createTempExecutable, checkBinary } = require('./utils');
 
 module.exports = {
   name: 'bash',
@@ -7,6 +7,9 @@ module.exports = {
     title: 'Script',
     hint: 'Bash — args passed as --key value flags',
     placeholder: '#!/usr/bin/env bash\n# Your script here\necho "args: $@"\n',
+  },
+  async checkAvailability() {
+    return checkBinary('bash');
   },
   runtimeOptions: [],
   normalizeRuntimeOptions() {

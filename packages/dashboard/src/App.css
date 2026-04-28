@@ -989,6 +989,10 @@ body::after,
   color: var(--text-muted);
 }
 
+.empty p {
+  margin: 0 0 16px;
+}
+
 .error {
   color: var(--red);
   font-size: 13px;

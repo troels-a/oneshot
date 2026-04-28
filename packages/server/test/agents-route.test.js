@@ -9,12 +9,13 @@ const agentsRouter = require('../src/routes/agents');
 
 const TMP = path.join(os.tmpdir(), 'oneshot-server-route-test');
 
-function makeApp(manager, agentsDir) {
+function makeApp(manager, agentsDir, options = {}) {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
     req.runManager = manager;
     req.agentsDir = agentsDir;
+    req.checkRuntimeAvailability = options.checkRuntimeAvailability || (async () => ({ available: true }));
     next();
   });
   app.use(agentsRouter);
@@ -202,5 +203,37 @@ describe('dispatch multi_instance guard', () => {
 
     assert.strictEqual(res.status, 201);
     assert.strictEqual(manager.dispatched.length, 1);
+  });
+});
+
+describe('dispatch rejects unavailable runtime', () => {
+  before(() => {
+    rmSync(TMP, { recursive: true, force: true });
+    mkdirSync(TMP, { recursive: true });
+  });
+
+  after(() => {
+    rmSync(TMP, { recursive: true, force: true });
+  });
+
+  it('returns 400 when runtime is unavailable', async () => {
+    const agentsDir = path.join(TMP, 'agents-unavailable');
+    writeAgent(agentsDir, 'test-agent', '---\nruntime: bash\n---\nbody');
+    const manager = fakeManager();
+    const app = makeApp(manager, agentsDir, {
+      checkRuntimeAvailability: async (name) => {
+        assert.strictEqual(name, 'bash');
+        return { available: false, reason: 'bash CLI not found in PATH' };
+      },
+    });
+
+    const res = await request(app)
+      .post('/agents/test-agent/dispatch')
+      .send({});
+
+    assert.strictEqual(res.status, 400);
+    assert.ok(res.body.error.includes('unavailable'));
+    assert.ok(res.body.error.includes('bash'));
+    assert.strictEqual(manager.dispatched.length, 0);
   });
 });

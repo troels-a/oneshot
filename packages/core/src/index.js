@@ -33,4 +33,5 @@ module.exports = {
   listRuntimeMetadata: runtimes.listRuntimeMetadata,
   isValidRuntime: runtimes.isValidRuntime,
   normalizeRuntimeOptions: runtimes.normalizeRuntimeOptions,
+  checkRuntimeAvailability: runtimes.checkRuntimeAvailability,
 };

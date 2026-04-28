@@ -26,6 +26,20 @@ function isValidRuntime(name) {
   return runtimeMap.has(name);
 }
 
+async function checkRuntimeAvailability(name) {
+  if (name) {
+    const runtime = runtimeMap.get(name);
+    if (!runtime) return null;
+    return runtime.checkAvailability();
+  }
+  const results = {};
+  const all = listRuntimes();
+  await Promise.all(all.map(async (runtime) => {
+    results[runtime.name] = await runtime.checkAvailability();
+  }));
+  return results;
+}
+
 function normalizeRuntimeOptions(name, runtimeOptions = {}) {
   const runtime = getRuntime(name);
   if (!runtime) {
@@ -40,4 +54,5 @@ module.exports = {
   listRuntimeMetadata,
   isValidRuntime,
   normalizeRuntimeOptions,
+  checkRuntimeAvailability,
 };

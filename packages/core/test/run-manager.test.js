@@ -7,6 +7,7 @@ const { execFileSync } = require('child_process');
 const RunManager = require('../src/run-manager');
 
 const TMP = path.join(os.tmpdir(), 'oneshot-run-manager-test');
+const ORIGINAL_WORKSPACE_DIR = process.env.ONESHOT_WORKSPACE_DIR;
 
 function initBareOrigin(dir) {
   mkdirSync(dir, { recursive: true });
@@ -48,9 +49,15 @@ describe('RunManager', () => {
   before(() => {
     rmSync(TMP, { recursive: true, force: true });
     mkdirSync(TMP, { recursive: true });
+    delete process.env.ONESHOT_WORKSPACE_DIR;
   });
 
   after(() => {
+    if (ORIGINAL_WORKSPACE_DIR === undefined) {
+      delete process.env.ONESHOT_WORKSPACE_DIR;
+    } else {
+      process.env.ONESHOT_WORKSPACE_DIR = ORIGINAL_WORKSPACE_DIR;
+    }
     rmSync(TMP, { recursive: true, force: true });
   });
 

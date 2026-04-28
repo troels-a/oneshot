@@ -35,6 +35,13 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
     const agentMdPath = path.join(req.agentsDir, req.params.agent, 'agent.md');
     const config = parseAgentMd(agentMdPath);
 
+    const runtimeStatus = await req.checkRuntimeAvailability(config.runtime);
+    if (runtimeStatus && !runtimeStatus.available) {
+      return res.status(400).json({
+        error: `Runtime "${config.runtime}" unavailable: ${runtimeStatus.reason}`
+      });
+    }
+
     if (!config.multi_instance) {
       const existing = manager.getRunningRun(agent);
       if (existing) {

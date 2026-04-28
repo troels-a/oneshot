@@ -1,4 +1,4 @@
-const { buildPromptEditor } = require('./utils');
+const { buildPromptEditor, checkBinary } = require('./utils');
 
 module.exports = {
   name: 'claude',
@@ -8,6 +8,9 @@ module.exports = {
     'Supports {{ args.* }} and {{ commands.* }} templates',
     'Enter the agent prompt...'
   ),
+  async checkAvailability() {
+    return checkBinary('claude');
+  },
   runtimeOptions: [],
   normalizeRuntimeOptions() {
     return {};

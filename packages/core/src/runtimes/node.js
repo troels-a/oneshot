@@ -1,4 +1,4 @@
-const { argsToFlags, createTempExecutable } = require('./utils');
+const { argsToFlags, createTempExecutable, checkBinary } = require('./utils');
 
 module.exports = {
   name: 'node',
@@ -7,6 +7,9 @@ module.exports = {
     title: 'Script',
     hint: 'Node.js — args passed as --key value flags via process.argv',
     placeholder: '// Your Node.js script here...\nconst args = process.argv.slice(2);\nconsole.log(args);\n',
+  },
+  async checkAvailability() {
+    return checkBinary('node');
   },
   runtimeOptions: [],
   normalizeRuntimeOptions() {
