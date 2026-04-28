@@ -3,7 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR } = require('./lib/core');
+const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, checkRuntimeAvailability } = require('@oneshot/core');
 const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
@@ -40,10 +40,12 @@ function createApp(options = {}) {
   app.use(createAuthMiddleware(apiKey, sessionSecret));
 
   // Inject dependencies
+  const checkAvailability = options.checkRuntimeAvailability || checkRuntimeAvailability;
   app.use((req, res, next) => {
     req.agentsDir = agentsDir;
     req.runManager = manager;
     req.scheduler = scheduler;
+    req.checkRuntimeAvailability = checkAvailability;
     next();
   });
 

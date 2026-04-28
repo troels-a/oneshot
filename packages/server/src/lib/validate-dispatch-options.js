@@ -5,7 +5,7 @@
 const {
   DISPATCH_OPTION_KEYS,
   validateDispatchOptions,
-} = require('./core');
+} = require('@oneshot/core');
 
 function validateBody(body) {
   return validateDispatchOptions(body || {});
