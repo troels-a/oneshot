@@ -64,7 +64,7 @@ class Scheduler {
     if (!schedule) return undefined;
 
     if (updates.cron !== undefined) schedule.cron = updates.cron;
-    if (updates.options !== undefined) schedule.options = { ...schedule.options, ...updates.options };
+    if (updates.options !== undefined) schedule.options = updates.options || {};
     if (updates.enabled !== undefined) schedule.enabled = updates.enabled;
 
     if (updates.cron !== undefined || updates.enabled !== undefined) {

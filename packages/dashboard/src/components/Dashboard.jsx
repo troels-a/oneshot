@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchRuns, fetchAllSchedules, clearRuns } from '../api';
+import { fetchAgents, fetchRuns, fetchAllSchedules, clearRuns, createSchedule } from '../api';
 import RunCard from './RunCard';
 import ScheduleCard from './ScheduleCard';
+import ScheduleForm from './ScheduleForm';
 
 const REFRESH_INTERVAL = 5000;
 const PAGE_SIZE = 25;
@@ -14,6 +15,9 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [agentFilter, setAgentFilter] = useState('');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [creatingSchedule, setCreatingSchedule] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const loadData = useCallback(async () => {
     try {
@@ -40,6 +44,21 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
     const interval = setInterval(loadData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  async function handleCreateSchedule({ agent, cron, enabled, options }) {
+    setCreateSaving(true);
+    setCreateError('');
+    try {
+      await createSchedule(agent, { cron, enabled, options });
+      setCreatingSchedule(false);
+      const allSchedules = await fetchAllSchedules();
+      setSchedules(allSchedules);
+    } catch (err) {
+      setCreateError(err.message);
+    } finally {
+      setCreateSaving(false);
+    }
+  }
 
   async function handleClear() {
     if (!window.confirm('Clear all completed and failed runs?')) return;
@@ -151,16 +170,50 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
         <div>
           <div className="filters" style={{ marginBottom: 16 }}>
             <span className="section-badge">{schedules.length} schedules</span>
+            {!creatingSchedule && agents.length > 0 && (
+              <button
+                className="btn btn-sm btn-dark"
+                onClick={() => { setCreateError(''); setCreatingSchedule(true); }}
+              >
+                + New Schedule
+              </button>
+            )}
           </div>
-          {schedules.length === 0 ? (
+          {creatingSchedule && (
+            <div style={{ marginBottom: 16 }}>
+              <div className="run-card">
+                <div className="run-card-header">
+                  <div className="run-card-left">
+                    <span className="run-card-agent">New schedule</span>
+                  </div>
+                </div>
+                <ScheduleForm
+                  mode="create"
+                  agents={agents}
+                  onSubmit={handleCreateSchedule}
+                  onCancel={() => { setCreatingSchedule(false); setCreateError(''); }}
+                  saving={createSaving}
+                  error={createError}
+                />
+              </div>
+            </div>
+          )}
+          {schedules.length === 0 && !creatingSchedule ? (
             <p className="empty">No schedules found</p>
           ) : (
-            <div className="run-card-list">
-              {schedules.map((s) => (
-                <div key={s.id} className={`run-card-wrapper ${s.enabled ? 'status-completed' : ''}`}>
-                  <ScheduleCard schedule={s} onUpdate={() => fetchAllSchedules().then(all => setSchedules(all))} />
-                </div>
-              ))}
+            <div className="run-card-list run-card-list--plain">
+              {schedules.map((s) => {
+                const agentDef = agents.find(a => a.name === s.agent);
+                return (
+                  <div key={s.id} className="run-card-wrapper">
+                    <ScheduleCard
+                      schedule={s}
+                      agentDef={agentDef}
+                      onUpdate={() => fetchAllSchedules().then(all => setSchedules(all))}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

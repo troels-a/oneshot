@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import NaturalCron from './NaturalCron';
+import ScheduleForm from './ScheduleForm';
 import { updateSchedule, deleteSchedule } from '../api';
 
 function timeAgo(iso) {
@@ -13,36 +14,26 @@ function timeAgo(iso) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-export default function ScheduleCard({ schedule, onUpdate }) {
+export default function ScheduleCard({ schedule, agentDef, onUpdate }) {
   const [editing, setEditing] = useState(false);
-  const [cron, setCron] = useState(schedule.cron);
-  const [enabled, setEnabled] = useState(schedule.enabled);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!editing) {
-      setCron(schedule.cron);
-      setEnabled(schedule.enabled);
-    }
-  }, [schedule.cron, schedule.enabled, editing]);
+    if (!editing) setError('');
+  }, [editing]);
 
   function handleToggleEdit() {
     if (saving) return;
-    if (editing) {
-      setCron(schedule.cron);
-      setEnabled(schedule.enabled);
-      setError('');
-    }
-    setEditing(!editing);
+    setEditing((prev) => !prev);
+    setError('');
   }
 
-  async function handleSave(e) {
-    e.stopPropagation();
+  async function handleSave({ cron, enabled, options }) {
     setSaving(true);
     setError('');
     try {
-      await updateSchedule(schedule.agent, schedule.id, { cron, enabled });
+      await updateSchedule(schedule.agent, schedule.id, { cron, enabled, options });
       setEditing(false);
       onUpdate();
     } catch (err) {
@@ -52,8 +43,7 @@ export default function ScheduleCard({ schedule, onUpdate }) {
     }
   }
 
-  async function handleDelete(e) {
-    e.stopPropagation();
+  async function handleDelete() {
     if (!window.confirm('Delete this schedule?')) return;
     setSaving(true);
     setError('');
@@ -62,17 +52,8 @@ export default function ScheduleCard({ schedule, onUpdate }) {
       onUpdate();
     } catch (err) {
       setError(err.message);
-    } finally {
       setSaving(false);
     }
-  }
-
-  function handleCancel(e) {
-    e.stopPropagation();
-    setCron(schedule.cron);
-    setEnabled(schedule.enabled);
-    setError('');
-    setEditing(false);
   }
 
   return (
@@ -113,45 +94,17 @@ export default function ScheduleCard({ schedule, onUpdate }) {
         </div>
       </div>
       {editing && (
-        <div className="schedule-edit-form">
-          <div className="schedule-edit-field">
-            <label className="schedule-edit-label">Cron expression</label>
-            <input
-              type="text"
-              className="schedule-edit-input"
-              value={cron}
-              onChange={(e) => setCron(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              disabled={saving}
-            />
-            <div className="schedule-edit-preview">
-              <NaturalCron expression={cron} />
-            </div>
-          </div>
-          <div className="schedule-edit-field">
-            <label className="schedule-edit-label schedule-toggle" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-                disabled={saving}
-              />
-              <span>Enabled</span>
-            </label>
-          </div>
-          {error && <div className="schedule-edit-error">{error}</div>}
-          <div className="schedule-edit-actions">
-            <button className="btn btn-dark btn-sm" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-            <button className="btn btn-glass btn-sm" onClick={handleCancel} disabled={saving}>
-              Cancel
-            </button>
-            <button className="btn btn-glass btn-sm" style={{ color: 'var(--red)' }} onClick={handleDelete} disabled={saving}>
-              Delete
-            </button>
-          </div>
-        </div>
+        <ScheduleForm
+          mode="edit"
+          agents={agentDef ? [agentDef] : []}
+          agentName={schedule.agent}
+          initial={{ cron: schedule.cron, enabled: schedule.enabled, options: schedule.options }}
+          onSubmit={handleSave}
+          onCancel={() => setEditing(false)}
+          onDelete={handleDelete}
+          saving={saving}
+          error={error}
+        />
       )}
     </div>
   );
