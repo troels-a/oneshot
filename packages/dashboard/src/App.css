@@ -1093,6 +1093,16 @@ body::after,
   padding-left: 24px;
 }
 
+.run-card-list--plain {
+  padding-left: 0;
+  gap: 12px;
+}
+
+.run-card-list--plain .run-card-wrapper::before,
+.run-card-list--plain .run-card-wrapper::after {
+  display: none;
+}
+
 .run-card-wrapper {
   position: relative;
   padding: 6px 0;
@@ -1482,4 +1492,51 @@ body::after,
   height: 16px;
   accent-color: var(--green);
   cursor: pointer;
+}
+
+.schedule-args-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-args-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-arg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-arg-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-arg-name {
+  flex: 0 0 30%;
+  min-width: 0;
+}
+
+.schedule-arg-name-static {
+  flex: 0 0 30%;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 8px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-arg-value {
+  flex: 1 1 auto;
+  min-width: 0;
 }
