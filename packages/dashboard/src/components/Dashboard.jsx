@@ -45,11 +45,11 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  async function handleCreateSchedule({ agent, cron, enabled, options }) {
+  async function handleCreateSchedule({ agent, cron, enabled, options, name }) {
     setCreateSaving(true);
     setCreateError('');
     try {
-      await createSchedule(agent, { cron, enabled, options });
+      await createSchedule(agent, { cron, enabled, options, name });
       setCreatingSchedule(false);
       const allSchedules = await fetchAllSchedules();
       setSchedules(allSchedules);

@@ -45,10 +45,17 @@ router.post('/agents/:agent/schedules', validateParams, async (req, res, next) =
       }
     }
 
+    if (body.name !== undefined && body.name !== null) {
+      if (typeof body.name !== 'string' || body.name.length > 200) {
+        return res.status(400).json({ error: 'name must be a string up to 200 characters' });
+      }
+    }
+
     const schedule = req.scheduler.createSchedule(agent, {
       cron: body.cron,
       options: body.options,
       enabled: body.enabled,
+      name: typeof body.name === 'string' ? body.name.trim() : undefined,
     });
 
     res.status(201).json(schedule);
@@ -94,10 +101,19 @@ router.patch('/agents/:agent/schedules/:scheduleId', validateParams, validateSch
       }
     }
 
+    if (body.name !== undefined && body.name !== null) {
+      if (typeof body.name !== 'string' || body.name.length > 200) {
+        return res.status(400).json({ error: 'name must be a string up to 200 characters' });
+      }
+    }
+
     const updates = {};
     if (body.cron !== undefined) updates.cron = body.cron;
     if (body.options !== undefined) updates.options = body.options;
     if (body.enabled !== undefined) updates.enabled = body.enabled;
+    if (body.name !== undefined) {
+      updates.name = body.name === null ? null : body.name.trim();
+    }
 
     res.json(req.scheduler.updateSchedule(req.params.scheduleId, updates));
   } catch (err) {

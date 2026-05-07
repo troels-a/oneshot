@@ -27,7 +27,7 @@ class Scheduler {
     }
   }
 
-  createSchedule(agent, { cron: cronExpr, options, enabled }) {
+  createSchedule(agent, { cron: cronExpr, options, enabled, name }) {
     const agentSchedules = this.listSchedules(agent);
     if (agentSchedules.length >= MAX_SCHEDULES_PER_AGENT) {
       throw new Error(`Maximum ${MAX_SCHEDULES_PER_AGENT} schedules per agent`);
@@ -38,6 +38,7 @@ class Scheduler {
     const schedule = {
       id,
       agent,
+      name: name || null,
       cron: cronExpr,
       options: options || {},
       enabled: isEnabled,
@@ -68,6 +69,7 @@ class Scheduler {
     if (updates.cron !== undefined) schedule.cron = updates.cron;
     if (updates.options !== undefined) schedule.options = { ...schedule.options, ...updates.options };
     if (updates.enabled !== undefined) schedule.enabled = updates.enabled;
+    if (updates.name !== undefined) schedule.name = updates.name || null;
 
     if (updates.cron !== undefined || updates.enabled !== undefined) {
       this._stopTask(id);

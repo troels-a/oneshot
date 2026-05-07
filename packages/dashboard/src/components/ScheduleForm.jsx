@@ -68,6 +68,7 @@ export default function ScheduleForm({
   const [selectedAgent, setSelectedAgent] = useState(
     agentName || (isCreate && agents && agents[0] ? agents[0].name : '')
   );
+  const [name, setName] = useState(initial?.name || '');
   const [cron, setCron] = useState(initial?.cron || '0 9 * * *');
   const [enabled, setEnabled] = useState(initial?.enabled !== false);
 
@@ -140,7 +141,8 @@ export default function ScheduleForm({
       setLocalError(err.message);
       return;
     }
-    const payload = { cron, enabled, options };
+    const trimmedName = name.trim();
+    const payload = { cron, enabled, options, name: trimmedName || null };
     if (isCreate) payload.agent = selectedAgent;
     onSubmit(payload);
   }
@@ -149,6 +151,19 @@ export default function ScheduleForm({
 
   return (
     <form className="schedule-edit-form" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()}>
+      <div className="schedule-edit-field">
+        <label className="schedule-edit-label">Name</label>
+        <input
+          type="text"
+          className="schedule-edit-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="optional — defaults to agent name"
+          maxLength={200}
+          disabled={saving}
+        />
+      </div>
+
       {isCreate && (
         <div className="schedule-edit-field">
           <label className="schedule-edit-label">Agent</label>

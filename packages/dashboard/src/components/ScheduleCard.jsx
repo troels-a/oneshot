@@ -29,11 +29,11 @@ export default function ScheduleCard({ schedule, agentDef, onUpdate }) {
     setError('');
   }
 
-  async function handleSave({ cron, enabled, options }) {
+  async function handleSave({ cron, enabled, options, name }) {
     setSaving(true);
     setError('');
     try {
-      await updateSchedule(schedule.agent, schedule.id, { cron, enabled, options });
+      await updateSchedule(schedule.agent, schedule.id, { cron, enabled, options, name });
       setEditing(false);
       onUpdate();
     } catch (err) {
@@ -60,7 +60,16 @@ export default function ScheduleCard({ schedule, agentDef, onUpdate }) {
     <div className="run-card">
       <div className="run-card-header" onClick={handleToggleEdit} style={{ cursor: 'pointer' }}>
         <div className="run-card-left">
-          <span className="run-card-agent">{schedule.agent}</span>
+          {schedule.name ? (
+            <span className="run-card-agent" style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8 }}>
+              <span>{schedule.name}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 'normal', color: 'var(--text-muted)' }}>
+                {schedule.agent}
+              </span>
+            </span>
+          ) : (
+            <span className="run-card-agent">{schedule.agent}</span>
+          )}
           <span className="run-card-status" style={{
             color: schedule.enabled ? 'var(--green)' : 'var(--text-muted)',
             background: schedule.enabled ? 'var(--green-bg)' : 'rgba(0,0,0,0.04)',
@@ -98,7 +107,7 @@ export default function ScheduleCard({ schedule, agentDef, onUpdate }) {
           mode="edit"
           agents={agentDef ? [agentDef] : []}
           agentName={schedule.agent}
-          initial={{ cron: schedule.cron, enabled: schedule.enabled, options: schedule.options }}
+          initial={{ cron: schedule.cron, enabled: schedule.enabled, options: schedule.options, name: schedule.name }}
           onSubmit={handleSave}
           onCancel={() => setEditing(false)}
           onDelete={handleDelete}
