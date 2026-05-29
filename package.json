@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.1",
   "workspaces": ["packages/*"],
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "setup": "node setup.js",
     "api": "npm run dev --workspace=packages/server",
