@@ -129,13 +129,15 @@ curl -X POST http://localhost:3000/agents/my-agent/dispatch \
 
 ### Scheduling
 
-Agents can be scheduled via the API with cron expressions:
+Agents can be scheduled via the API with cron expressions. Dispatch options
+(including `args`) go inside an `options` object — a top-level `args` field is
+ignored:
 
 ```bash
 curl -X POST http://localhost:3000/agents/my-agent/schedules \
   -H "Authorization: Bearer $ONESHOT_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"cron": "0 9 * * 1-5", "args": {"arg_name": "value"}}'
+  -d '{"cron": "0 9 * * 1-5", "options": {"args": {"arg_name": "value"}}}'
 ```
 
 Only one instance of an agent runs at a time. Scheduled runs are skipped if the previous run is still executing. To allow concurrent runs, set `multi_instance: true` in the agent's frontmatter.
