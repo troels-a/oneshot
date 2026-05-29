@@ -1,9 +1,11 @@
 const { randomUUID } = require('crypto');
 const path = require('path');
-const { readFileSync, writeFileSync } = require('fs');
 const cron = require('node-cron');
 const parseAgentMd = require('./parse-agent-md');
 const cronParser = require('cron-parser');
+const { createSchedulesRepo } = require('./db/schedules');
+const { SCHEDULE_RESULT } = require('./constants');
+
 const parseCronExpression = (cronParser.CronExpressionParser || cronParser.default || cronParser).parse.bind(
   cronParser.CronExpressionParser || cronParser.default || cronParser
 );
@@ -11,9 +13,11 @@ const parseCronExpression = (cronParser.CronExpressionParser || cronParser.defau
 const MAX_SCHEDULES_PER_AGENT = 50;
 
 class Scheduler {
-  constructor({ runManager, schedulesFile, agentsDir }) {
+  constructor({ db, runManager, agentsDir }) {
+    if (!db) throw new Error('Scheduler requires a db connection');
+    this.db = db;
+    this.repo = createSchedulesRepo(db);
     this.runManager = runManager;
-    this.schedulesFile = schedulesFile;
     this.agentsDir = agentsDir;
     this.schedules = new Map();
     this.tasks = new Map();
@@ -48,9 +52,9 @@ class Scheduler {
       nextRunAt: isEnabled ? this._computeNextRun(cronExpr) : null,
     };
 
+    this.repo.insertSchedule(schedule);
     this.schedules.set(id, schedule);
     if (isEnabled) this._startTask(schedule);
-    this.saveToDisk();
     return schedule;
   }
 
@@ -66,10 +70,23 @@ class Scheduler {
     const schedule = this.schedules.get(id);
     if (!schedule) return undefined;
 
-    if (updates.cron !== undefined) schedule.cron = updates.cron;
-    if (updates.options !== undefined) schedule.options = { ...schedule.options, ...updates.options };
-    if (updates.enabled !== undefined) schedule.enabled = updates.enabled;
-    if (updates.name !== undefined) schedule.name = updates.name || null;
+    const dbUpdates = {};
+    if (updates.cron !== undefined) {
+      schedule.cron = updates.cron;
+      dbUpdates.cron = updates.cron;
+    }
+    if (updates.options !== undefined) {
+      schedule.options = { ...schedule.options, ...updates.options };
+      dbUpdates.options = schedule.options;
+    }
+    if (updates.enabled !== undefined) {
+      schedule.enabled = updates.enabled;
+      dbUpdates.enabled = updates.enabled;
+    }
+    if (updates.name !== undefined) {
+      schedule.name = updates.name || null;
+      dbUpdates.name = schedule.name;
+    }
 
     if (updates.cron !== undefined || updates.enabled !== undefined) {
       this._stopTask(id);
@@ -79,17 +96,18 @@ class Scheduler {
       } else {
         schedule.nextRunAt = null;
       }
+      dbUpdates.nextRunAt = schedule.nextRunAt;
     }
 
-    this.saveToDisk();
+    this.repo.updateSchedule(id, dbUpdates);
     return schedule;
   }
 
   deleteSchedule(id) {
     this._stopTask(id);
-    const deleted = this.schedules.delete(id);
-    if (deleted) this.saveToDisk();
-    return deleted;
+    const removed = this.schedules.delete(id);
+    if (removed) this.repo.deleteSchedule(id);
+    return removed;
   }
 
   _startTask(schedule) {
@@ -119,52 +137,44 @@ class Scheduler {
     schedule.lastRunAt = new Date().toISOString();
     schedule.nextRunAt = this._computeNextRun(schedule.cron);
 
+    const persistTickFields = () => {
+      this.repo.updateSchedule(schedule.id, {
+        lastRunAt: schedule.lastRunAt,
+        lastRunResult: schedule.lastRunResult,
+        nextRunAt: schedule.nextRunAt,
+      });
+    };
+
     if (!config.multi_instance) {
       const running = this.runManager.getRunningRun(schedule.agent);
       if (running) {
-        schedule.lastRunResult = 'skipped';
-        this.saveToDisk();
+        schedule.lastRunResult = SCHEDULE_RESULT.SKIPPED;
+        persistTickFields();
         return;
       }
     }
 
     try {
       await this.runManager.dispatchRun(schedule.agent, schedule.options);
-      schedule.lastRunResult = 'dispatched';
+      schedule.lastRunResult = SCHEDULE_RESULT.DISPATCHED;
     } catch (err) {
       console.error(`Schedule ${schedule.id} dispatch error:`, err.message);
-      schedule.lastRunResult = 'error';
+      schedule.lastRunResult = SCHEDULE_RESULT.ERROR;
     }
 
-    this.saveToDisk();
+    persistTickFields();
   }
 
-  saveToDisk() {
-    const data = {};
-    for (const [id, schedule] of this.schedules) {
-      data[id] = schedule;
-    }
-    writeFileSync(this.schedulesFile, JSON.stringify({ schedules: data }, null, 2));
-  }
-
-  loadFromDisk() {
-    let raw;
-    try {
-      raw = JSON.parse(readFileSync(this.schedulesFile, 'utf8'));
-    } catch {
-      return;
-    }
-
-    if (!raw.schedules || typeof raw.schedules !== 'object') return;
-
-    for (const [id, schedule] of Object.entries(raw.schedules)) {
+  loadFromDb() {
+    for (const schedule of this.repo.listAllSchedules()) {
       if (!schedule.cron || !cron.validate(schedule.cron)) {
-        console.warn(`Skipping invalid schedule ${id}: bad cron expression`);
+        console.warn(`Skipping invalid schedule ${schedule.id}: bad cron expression`);
         continue;
       }
-      this.schedules.set(id, schedule);
+      this.schedules.set(schedule.id, schedule);
       if (schedule.enabled) {
         schedule.nextRunAt = this._computeNextRun(schedule.cron);
+        this.repo.updateSchedule(schedule.id, { nextRunAt: schedule.nextRunAt });
         this._startTask(schedule);
       }
     }

@@ -1,7 +1,5 @@
 const { Router } = require('express');
-const { readdirSync, statSync, existsSync, createReadStream } = require('fs');
-const { createInterface } = require('readline');
-const path = require('path');
+const { STREAM_FILENAMES, streamForFilename } = require('@oneshot/core/src/constants');
 const router = Router();
 
 router.get('/runs', (req, res) => {
@@ -22,80 +20,43 @@ router.get('/runs/:id/logs', (req, res) => {
   const run = req.runManager.getRun(req.params.id);
   if (!run) return res.status(404).json({ error: 'Run not found' });
 
-  if (!existsSync(run.logDir)) {
-    return res.status(404).json({ error: 'No logs found' });
-  }
-
-  const entries = readdirSync(run.logDir);
-  const files = [];
-  for (const name of entries) {
-    if (name === 'run.json' || name === 'job.json') continue;
-    const stat = statSync(path.join(run.logDir, name));
-    if (!stat.isFile()) continue;
-    files.push({ name, size: stat.size, modifiedAt: stat.mtime.toISOString() });
-  }
-
+  const summary = req.runManager.getLogSummary(run.id);
+  const files = [
+    { name: STREAM_FILENAMES.stdout, size: summary.stdout, lines: summary.stdout },
+    { name: STREAM_FILENAMES.stderr, size: summary.stderr, lines: summary.stderr },
+  ];
   res.json({ runId: run.id, files });
 });
 
-router.get('/runs/:id/logs/:filename', async (req, res) => {
+router.get('/runs/:id/logs/:filename', (req, res) => {
   const run = req.runManager.getRun(req.params.id);
   if (!run) return res.status(404).json({ error: 'Run not found' });
 
-  const filename = path.basename(req.params.filename);
-  const filePath = path.join(run.logDir, filename);
-
-  if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-    return res.status(404).json({ error: 'Log file not found' });
-  }
+  const stream = streamForFilename(req.params.filename);
+  if (!stream) return res.status(404).json({ error: 'Log file not found' });
 
   const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
   const limit = req.query.limit != null ? Math.max(1, parseInt(req.query.limit, 10) || 50) : 0;
 
-  const rl = createInterface({ input: createReadStream(filePath, 'utf-8'), crlfDelay: Infinity });
-  const lines = [];
-  let lineNum = 0;
-  let hasMore = false;
-
-  for await (const line of rl) {
-    if (lineNum >= offset && (limit === 0 || lines.length < limit)) {
-      lines.push(line);
-    } else if (limit > 0 && lines.length >= limit) {
-      hasMore = true;
-      rl.close();
-      break;
-    }
-    lineNum++;
-  }
-
-  res.json({ lines, offset, limit, hasMore });
+  const result = req.runManager.getLogLines(run.id, stream, { offset, limit });
+  res.json({
+    lines: result.lines,
+    offset: result.offset,
+    limit,
+    hasMore: result.hasMore,
+  });
 });
 
-router.get('/runs/:id/logs/:filename/tail', async (req, res) => {
+router.get('/runs/:id/logs/:filename/tail', (req, res) => {
   const run = req.runManager.getRun(req.params.id);
   if (!run) return res.status(404).json({ error: 'Run not found' });
 
-  const filename = path.basename(req.params.filename);
-  const filePath = path.join(run.logDir, filename);
-
-  if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-    return res.status(404).json({ error: 'Log file not found' });
-  }
+  const stream = streamForFilename(req.params.filename);
+  if (!stream) return res.status(404).json({ error: 'Log file not found' });
 
   const after = Math.max(0, parseInt(req.query.after, 10) || 0);
-
-  const rl = createInterface({ input: createReadStream(filePath, 'utf-8'), crlfDelay: Infinity });
-  const lines = [];
-  let lineNum = 0;
-
-  for await (const line of rl) {
-    if (lineNum >= after) {
-      lines.push(line);
-    }
-    lineNum++;
-  }
-
-  res.json({ lines, lastLine: lineNum });
+  const result = req.runManager.getLogLinesAfter(run.id, stream, after);
+  res.json({ lines: result.lines, lastLine: result.lastLine });
 });
 
 router.post('/runs/:id/stop', (req, res) => {

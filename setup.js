@@ -17,10 +17,10 @@ const ROOT = __dirname;
 async function main() {
   console.log('\n  oneshot setup\n  ─────────────\n');
 
-  // 1. Check Node version
+  // 1. Check Node version (24+ for stable node:sqlite)
   const major = parseInt(process.versions.node.split('.')[0], 10);
-  if (major < 18) {
-    console.error(`  Node.js >= 18 required (you have ${process.versions.node}).`);
+  if (major < 24) {
+    console.error(`  Node.js >= 24 required (you have ${process.versions.node}).`);
     process.exit(1);
   }
   console.log(`  Node.js ${process.versions.node} ✓\n`);
@@ -100,6 +100,16 @@ async function main() {
     console.log('  Dependencies installed ✓');
   } else {
     console.log('  Dependencies already installed ✓');
+  }
+
+  // 5a. Initialize SQLite database (applies migrations)
+  try {
+    const { openDb } = require('./packages/core/src');
+    openDb(path.join(ROOT, '.oneshot'));
+    console.log('  Initialized .oneshot/oneshot.db ✓');
+  } catch (err) {
+    console.error(`  Failed to initialize database: ${err.message}`);
+    process.exit(1);
   }
 
   // 6. Link CLI globally

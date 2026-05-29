@@ -2,11 +2,11 @@
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
-const { discoverAgents, parseAgentMd, RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR } = require('@oneshot/core');
+const { discoverAgents, parseAgentMd, RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, openDb } = require('@oneshot/core');
 
 const agentsDir = resolveAgentsDir();
-const schedulesFile = path.join(DATA_DIR, 'schedules.json');
 const [,, command, ...rest] = process.argv;
+function getDb() { return openDb(DATA_DIR); }
 
 if (!command || command === 'help' || command === '--help') {
   console.log(`Usage:
@@ -72,7 +72,7 @@ if (command === 'info') {
 }
 
 if (command === 'clear') {
-  const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
+  const manager = new RunManager({ db: getDb(), logsDir: resolveLogsDir(), agentsDir });
   const runs = manager.listRuns({});
   const clearable = runs.filter(r => r.status !== 'running' && r.status !== 'pending');
 
@@ -120,7 +120,7 @@ if (command === 'clear') {
   }
 
   (async () => {
-    const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
+    const manager = new RunManager({ db: getDb(), logsDir: resolveLogsDir(), agentsDir });
     const { run, child, done } = await manager.dispatchRun(name, {
       args: providedArgs,
       timeout,
@@ -153,9 +153,10 @@ if (command === 'clear') {
     process.exit(1);
   }
 
-  const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
-  const scheduler = new Scheduler({ runManager: manager, schedulesFile, agentsDir });
-  scheduler.loadFromDisk();
+  const db = getDb();
+  const manager = new RunManager({ db, logsDir: resolveLogsDir(), agentsDir });
+  const scheduler = new Scheduler({ db, runManager: manager, agentsDir });
+  scheduler.loadFromDb();
 
   const schedule = scheduler.createSchedule(name, { cron: cronExpr });
   scheduler.stopAll();
@@ -163,9 +164,10 @@ if (command === 'clear') {
   process.exit(0);
 
 } else if (command === 'schedules') {
-  const manager = new RunManager({ logsDir: resolveLogsDir(), agentsDir });
-  const scheduler = new Scheduler({ runManager: manager, schedulesFile, agentsDir });
-  scheduler.loadFromDisk();
+  const db = getDb();
+  const manager = new RunManager({ db, logsDir: resolveLogsDir(), agentsDir });
+  const scheduler = new Scheduler({ db, runManager: manager, agentsDir });
+  scheduler.loadFromDb();
 
   const agents = discoverAgents(agentsDir);
   const all = agents.flatMap(a => scheduler.listSchedules(a.name));

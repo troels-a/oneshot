@@ -75,6 +75,21 @@ describe('buildCommand', () => {
     ]);
   });
 
+  it('includes -m <model> when codex model runtime option is set', () => {
+    const { args } = buildCommand('codex', agentDir, 'do stuff', {}, {
+      model: 'gpt-5.1',
+    });
+    const modelIdx = args.indexOf('-m');
+    assert.ok(modelIdx > -1, '-m should be present');
+    assert.strictEqual(args[modelIdx + 1], 'gpt-5.1');
+    assert.ok(modelIdx > args.indexOf('exec'), '-m should come after the exec subcommand');
+  });
+
+  it('omits -m when codex model is blank', () => {
+    const { args } = buildCommand('codex', agentDir, 'do stuff', {}, { model: '' });
+    assert.strictEqual(args.indexOf('-m'), -1);
+  });
+
   it('throws on unknown runtime', () => {
     assert.throws(() => buildCommand('python', agentDir, '', {}), /Unknown runtime/);
   });

@@ -8,7 +8,8 @@
     "api": "npm run dev --workspace=packages/server",
     "dashboard": "npm run dev --workspace=packages/dashboard",
     "build:dashboard": "npm run build --workspace=packages/dashboard",
-    "update": "git checkout main && git pull && npm install && npm run build:dashboard",
+    "update": "git checkout main && git pull && npm install && npm run build:dashboard && node scripts/migrate-from-fs.js --auto",
+    "migrate-from-fs": "node scripts/migrate-from-fs.js",
     "start": "npm run api & npm run dashboard &",
     "test": "npm test --workspaces --if-present"
   }
