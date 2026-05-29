@@ -1,6 +1,7 @@
 const { REPO_ROOT, DATA_DIR } = require('./paths');
 const dispatchOptions = require('./dispatch-options');
 const runtimes = require('./runtimes');
+const db = require('./db');
 
 module.exports = {
   REPO_ROOT,
@@ -19,7 +20,7 @@ module.exports = {
   resolveWorkspaceDir: require('./resolve-workspace-dir'),
   resolveLogsDir: require('./resolve-logs-dir'),
   resolveCwd: require('./resolve-cwd'),
-  createRunLogger: require('./run-logger'),
+  createRunLogWriter: require('./run-log-writer'),
   createWorktree: require('./worktree').createWorktree,
   removeWorktree: require('./worktree').removeWorktree,
   Scheduler: require('./scheduler'),
@@ -34,4 +35,6 @@ module.exports = {
   isValidRuntime: runtimes.isValidRuntime,
   normalizeRuntimeOptions: runtimes.normalizeRuntimeOptions,
   checkRuntimeAvailability: runtimes.checkRuntimeAvailability,
+  openDb: db.openDb,
+  closeDb: db.closeDb,
 };

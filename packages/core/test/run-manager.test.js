@@ -5,6 +5,7 @@ const path = require('path');
 const { mkdirSync, rmSync, writeFileSync } = require('fs');
 const { execFileSync } = require('child_process');
 const RunManager = require('../src/run-manager');
+const { openDb, closeDb } = require('../src/db');
 
 const TMP = path.join(os.tmpdir(), 'oneshot-run-manager-test');
 const ORIGINAL_WORKSPACE_DIR = process.env.ONESHOT_WORKSPACE_DIR;
@@ -39,9 +40,10 @@ function makeManager(suffix, extraOpts = {}) {
   mkdirSync(logsDir, { recursive: true });
   mkdirSync(agentsDir, { recursive: true });
   mkdirSync(dataDir, { recursive: true });
+  const db = openDb(dataDir);
   return {
-    manager: new RunManager({ logsDir, agentsDir, dataDir, ...extraOpts }),
-    root, logsDir, agentsDir, dataDir,
+    manager: new RunManager({ db, logsDir, agentsDir, dataDir, ...extraOpts }),
+    root, logsDir, agentsDir, dataDir, db,
   };
 }
 
@@ -272,6 +274,54 @@ exit 7
       await done;
       assert.strictEqual(run.status, 'failed');
       assert.strictEqual(run.exitCode, 7);
+    });
+  });
+
+  describe('db persistence', () => {
+    it('writes stdout lines into log_lines table', async () => {
+      const { manager, agentsDir, db } = makeManager('db-logs');
+      writeAgent(agentsDir, 'speaker', `---
+runtime: bash
+---
+#!/usr/bin/env bash
+echo "first line"
+echo "second line"
+echo "third line"
+exit 0
+`);
+      const { run, done } = await manager.dispatchRun('speaker', {});
+      await done;
+
+      const { createRepos } = require('../src/db');
+      const logs = createRepos(db).logs;
+      assert.strictEqual(logs.getStreamCount(run.id, 'stdout'), 3);
+      assert.deepStrictEqual(
+        logs.getLogLines(run.id, 'stdout', {}).lines,
+        ['first line', 'second line', 'third line'],
+      );
+    });
+
+    it('makes runs visible via listRuns and getRun after completion', async () => {
+      const { manager, agentsDir, db } = makeManager('db-listing');
+      writeAgent(agentsDir, 'quick', `---
+runtime: bash
+---
+#!/usr/bin/env bash
+exit 0
+`);
+      const { run, done } = await manager.dispatchRun('quick', {});
+      await done;
+
+      const fetched = manager.getRun(run.id);
+      assert.strictEqual(fetched.id, run.id);
+      assert.strictEqual(fetched.status, 'completed');
+      assert.strictEqual(manager.listRuns({ agent: 'quick' }).length, 1);
+
+      // Even after the in-memory map is cleared, DB still has the row.
+      const { createRepos } = require('../src/db');
+      const fromDb = createRepos(db).runs.getRun(run.id);
+      assert.strictEqual(fromDb.status, 'completed');
+      assert.strictEqual(fromDb.exitCode, 0);
     });
   });
 

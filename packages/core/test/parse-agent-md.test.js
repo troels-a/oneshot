@@ -121,6 +121,7 @@ body`);
     const result = parseAgentMd(p);
     assert.strictEqual(result.runtime, 'codex');
     assert.deepStrictEqual(result.runtimeOptions, {
+      model: '',
       approvalPolicy: 'never',
       sandboxMode: 'danger-full-access',
       webSearch: true,

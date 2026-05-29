@@ -3,7 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, checkRuntimeAvailability } = require('@oneshot/core');
+const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, checkRuntimeAvailability, openDb } = require('@oneshot/core');
 const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
@@ -23,11 +23,12 @@ function createApp(options = {}) {
   const sessionSecret = options.sessionSecret || loadOrCreateSecret(DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
+  const db = options.db || openDb(options.dataDir || DATA_DIR);
 
-  const manager = new RunManager({ logsDir, agentsDir, dataDir: DATA_DIR });
-  const schedulesFile = options.schedulesFile || path.join(DATA_DIR, 'schedules.json');
-  const scheduler = new Scheduler({ runManager: manager, schedulesFile, agentsDir });
-  scheduler.loadFromDisk();
+  const manager = new RunManager({ db, logsDir, agentsDir, dataDir: options.dataDir || DATA_DIR });
+  manager.recoverInflightRuns();
+  const scheduler = new Scheduler({ db, runManager: manager, agentsDir });
+  scheduler.loadFromDb();
 
   const app = express();
   app.use(express.json());

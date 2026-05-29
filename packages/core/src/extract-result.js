@@ -1,6 +1,5 @@
-const path = require('path');
-const { readFileSync, existsSync } = require('fs');
 const { getRuntime } = require('./runtimes');
+const { createLogsRepo } = require('./db/logs');
 
 const MAX_RESULT_SIZE = 50000;
 
@@ -11,11 +10,9 @@ function defaultExtractResult(content) {
   return { result: trimmed, meta: null };
 }
 
-function extractResult(logDir, runtimeName) {
-  const stdoutPath = path.join(logDir, 'stdout.log');
-  if (!existsSync(stdoutPath)) return { result: null, meta: null };
-
-  const content = readFileSync(stdoutPath, 'utf8');
+function extractResult(db, runId, runtimeName) {
+  const logs = createLogsRepo(db);
+  const content = logs.getStreamContent(runId, 'stdout');
   if (!content.trim()) return { result: null, meta: null };
 
   const runtime = getRuntime(runtimeName);

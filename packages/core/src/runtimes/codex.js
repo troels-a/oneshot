@@ -2,6 +2,13 @@ const { buildPromptEditor, normalizeOptionFields, checkBinary } = require('./uti
 
 const runtimeOptions = [
   {
+    name: 'model',
+    label: 'Model',
+    description: 'Codex model (e.g. gpt-5.1). Leave blank to use the codex CLI default.',
+    type: 'text',
+    default: '',
+  },
+  {
     name: 'approvalPolicy',
     label: 'Approval Policy',
     description: 'When Codex should request approval before executing commands.',
@@ -100,6 +107,10 @@ module.exports = {
     }
 
     args.push('exec', '--skip-git-repo-check', '--json', '-s', options.sandboxMode);
+
+    if (options.model) {
+      args.push('-m', options.model);
+    }
 
     args.push(renderedPrompt);
 

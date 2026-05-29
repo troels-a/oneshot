@@ -1,21 +1,21 @@
 const path = require('path');
 const { spawn, execFileSync } = require('child_process');
-const { existsSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync, mkdirSync } = require('fs');
+const { readdirSync, readFileSync, rmSync, mkdirSync } = require('fs');
 const { rm } = require('fs/promises');
 const prepareAgent = require('./prepare-agent');
 const resolveCwd = require('./resolve-cwd');
-const createRunLogger = require('./run-logger');
+const createRunLogWriter = require('./run-log-writer');
 const extractResult = require('./extract-result');
 const { createWorktree, removeWorktree } = require('./worktree');
+const { createRepos } = require('./db');
 const {
   DEFAULT_TIMEOUT_SEC,
   DISPATCH_OPTION_KEYS,
   pickDispatchOptions,
 } = require('./dispatch-options');
+const { RUN_STATUS, TERMINAL_STATUSES } = require('./constants');
 
-const MAX_COMPLETED_RUNS = 1000;
 const DEFAULT_KILL_GRACE_MS = 10_000;
-const TERMINAL_STATUSES = new Set(['completed', 'failed', 'timed_out']);
 
 // Send a signal to a process group, falling back to the single PID if the
 // group is gone (or detached spawn was disabled). Swallows ESRCH so callers
@@ -29,36 +29,58 @@ function killGroup(pid, signal) {
 }
 
 class RunManager {
-  constructor({ logsDir, agentsDir, dataDir, killGraceMs }) {
+  constructor({ db, logsDir, agentsDir, dataDir, killGraceMs }) {
+    if (!db) throw new Error('RunManager requires a db connection');
+    this.db = db;
+    const repos = createRepos(db);
+    this._runs = repos.runs;
+    this._logs = repos.logs;
     this.logsDir = logsDir;
     this.agentsDir = agentsDir;
     this.dataDir = dataDir || require('./paths').DATA_DIR;
     this.killGraceMs = killGraceMs ?? DEFAULT_KILL_GRACE_MS;
     this.runs = new Map();
     this.processes = new Map();
+    this._worktreeRepoRoots = new Map();
   }
 
   getRun(id) {
-    const run = this.runs.get(id);
-    if (run) return run;
-    return this._loadDiskRun(id);
+    return this.runs.get(id) || this._runs.getRun(id);
   }
 
   listRuns(filters = {}) {
-    this._loadDiskRuns();
-    let runs = Array.from(this.runs.values());
-    if (filters.status) runs = runs.filter(r => r.status === filters.status);
-    if (filters.agent) runs = runs.filter(r => r.agentName === filters.agent);
-    return runs;
+    const dbRuns = this._runs.listRuns(filters);
+    if (!this.runs.size) return dbRuns;
+    return dbRuns.map((row) => this.runs.get(row.id) || row);
   }
 
   getRunningRun(agentName) {
     for (const run of this.runs.values()) {
-      if (run.agentName === agentName && run.status === 'running') {
-        return run;
-      }
+      if (run.agentName === agentName && run.status === RUN_STATUS.RUNNING) return run;
     }
-    return null;
+    return this._runs.getRunningRunByAgent(agentName);
+  }
+
+  // Called at server boot. Marks dead PIDs as failed.
+  recoverInflightRuns() {
+    for (const run of this._runs.listRunningRuns()) {
+      this._checkPidAlive(run);
+    }
+  }
+
+  // Log accessors — routes go through these instead of reaching into the repo.
+  getLogSummary(runId) {
+    const stdout = this._logs.getMaxLineNumber(runId, 'stdout');
+    const stderr = this._logs.getMaxLineNumber(runId, 'stderr');
+    return { stdout, stderr };
+  }
+
+  getLogLines(runId, stream, opts) {
+    return this._logs.getLogLines(runId, stream, opts);
+  }
+
+  getLogLinesAfter(runId, stream, after) {
+    return this._logs.getLogLinesAfter(runId, stream, after);
   }
 
   async dispatchRun(agentName, options = {}) {
@@ -67,32 +89,37 @@ class RunManager {
     const cwd = resolveCwd(agentDir, options.path);
     const { config, command } = prepareAgent(agentDir, providedArgs, cwd);
 
-    const { id, logDir, stdoutStream, stderrStream } = createRunLogger(this.logsDir);
+    // Validate worktree requirements BEFORE creating the log dir / writer,
+    // so a misconfigured schedule doesn't litter empty log directories.
+    if (config.worktree && !options.path) {
+      throw new Error('worktree agents require a path option pointing to the target repository');
+    }
+
+    const writer = createRunLogWriter({ logsRepo: this._logs, logsDir: this.logsDir });
+    const id = writer.id;
+    const logDir = writer.logDir;
 
     let worktreeInfo = null;
     let spawnCwd = cwd;
     if (config.worktree) {
-      if (!options.path) {
-        throw new Error('worktree agents require a path option pointing to the target repository');
-      }
       try {
         worktreeInfo = createWorktree(cwd, id, agentName, this.dataDir, options.branch);
         spawnCwd = worktreeInfo.worktreeDir;
       } catch (err) {
-        stdoutStream.destroy();
-        stderrStream.destroy();
+        // Safe to destroy without finalizing: nothing has been piped to the
+        // writer yet, so its line buffer is provably empty.
+        writer.stdout.destroy();
+        writer.stderr.destroy();
+        try { rmSync(logDir, { recursive: true, force: true }); } catch {}
         throw err;
       }
     }
 
-    // Persist every known dispatch option (null when unset) so the on-disk
-    // run record stays uniform as new options are added to the schema.
     const persistedOptions = {};
     for (const key of DISPATCH_OPTION_KEYS) {
       persistedOptions[key] = options[key] ?? null;
     }
     persistedOptions.args = Object.keys(providedArgs).length ? providedArgs : null;
-    // Apply default timeout (every run gets a wall-clock ceiling).
     if (persistedOptions.timeout == null) {
       persistedOptions.timeout = DEFAULT_TIMEOUT_SEC;
     }
@@ -102,7 +129,7 @@ class RunManager {
       agentName,
       runtime: config.runtime,
       source: options.source || 'server',
-      status: 'pending',
+      status: RUN_STATUS.PENDING,
       pid: null,
       startedAt: new Date().toISOString(),
       completedAt: null,
@@ -112,9 +139,12 @@ class RunManager {
       cwd,
       logDir,
       worktree: worktreeInfo ? { dir: worktreeInfo.worktreeDir, branch: worktreeInfo.branch } : null,
-      _worktreeRepoRoot: worktreeInfo ? worktreeInfo.repoRoot : null,
+      result: null,
+      resultMeta: null,
+      spawnedBy: null,
     };
     this.runs.set(id, run);
+    if (worktreeInfo) this._worktreeRepoRoots.set(id, worktreeInfo.repoRoot);
 
     const { cmd, args } = command;
 
@@ -139,13 +169,13 @@ class RunManager {
       detached: true,
     });
 
-    child.stdout.pipe(stdoutStream);
-    child.stderr.pipe(stderrStream);
+    child.stdout.pipe(writer.stdout);
+    child.stderr.pipe(writer.stderr);
 
-    run.status = 'running';
+    run.status = RUN_STATUS.RUNNING;
     run.pid = child.pid;
     this.processes.set(run.id, child);
-    this._persistRun(run);
+    this._runs.insertRun(run);
 
     // Wall-clock timeout: SIGTERM the process group at `timeout` seconds, then
     // escalate to SIGKILL after `killGraceMs` if the agent ignores SIGTERM.
@@ -169,56 +199,39 @@ class RunManager {
         run.completedAt = new Date().toISOString();
         run.exitCode = code;
         run.signal = signal || null;
-        if (timedOut) {
-          run.status = 'timed_out';
-        } else {
-          run.status = (code === 0) ? 'completed' : 'failed';
-        }
+        if (timedOut) run.status = RUN_STATUS.TIMED_OUT;
+        else run.status = (code === 0) ? RUN_STATUS.COMPLETED : RUN_STATUS.FAILED;
         this.processes.delete(run.id);
 
-        // Wait for stdout stream to flush before extracting result
         const extract = () => {
           try {
-            const { result, meta } = extractResult(run.logDir, run.runtime);
+            const { result, meta } = extractResult(this.db, run.id, run.runtime);
             run.result = result;
             run.resultMeta = meta;
           } catch {
             run.result = null;
             run.resultMeta = null;
           }
-
           command.cleanup?.();
-          if (run.worktree && run._worktreeRepoRoot) {
-            try { removeWorktree(run._worktreeRepoRoot, run.worktree.dir); } catch {}
-          }
-          this._persistRun(run);
-          this._evictOldRuns();
-
-          // Process spawn requests after cleanup (worktree/branch freed)
-          if (run.status === 'completed') {
+          this._finalizeRun(run);
+          this._runs.updateRunResult(run.id, run.result, run.resultMeta);
+          if (run.status === RUN_STATUS.COMPLETED) {
             this._processSpawns(run, options);
           }
-
           resolve({ exitCode: code, signal: signal || null });
         };
 
-        if (stdoutStream.writableFinished) {
-          extract();
-        } else {
-          stdoutStream.on('finish', extract);
-        }
+        if (writer.stdout.writableFinished) extract();
+        else writer.stdout.on('finish', extract);
       });
 
       child.on('error', (err) => {
         if (termTimer) clearTimeout(termTimer);
         if (killTimer) clearTimeout(killTimer);
-        run.status = 'failed';
+        run.status = RUN_STATUS.FAILED;
         run.completedAt = new Date().toISOString();
         this.processes.delete(run.id);
-        if (run.worktree && run._worktreeRepoRoot) {
-          try { removeWorktree(run._worktreeRepoRoot, run.worktree.dir); } catch {}
-        }
-        this._persistRun(run);
+        this._finalizeRun(run);
         resolve({ exitCode: null, signal: null, error: err });
       });
     });
@@ -226,68 +239,43 @@ class RunManager {
     return { run, child, done };
   }
 
-  _persistRun(run) {
-    const filePath = path.join(run.logDir, 'run.json');
-    const { _worktreeRepoRoot, ...serializable } = run;
-    writeFileSync(filePath, JSON.stringify(serializable, null, 2));
-  }
-
-  _loadDiskRun(id) {
-    const dir = path.join(this.logsDir, id);
-    const filePath = existsSync(path.join(dir, 'run.json'))
-      ? path.join(dir, 'run.json')
-      : path.join(dir, 'job.json');
-    try {
-      const run = JSON.parse(readFileSync(filePath, 'utf8'));
-      if (run.status === 'running') this._checkPidAlive(run);
-      this.runs.set(id, run);
-      return run;
-    } catch {
-      return null;
+  _finalizeRun(run) {
+    const repoRoot = this._worktreeRepoRoots.get(run.id);
+    if (run.worktree && repoRoot) {
+      try { removeWorktree(repoRoot, run.worktree.dir); } catch {}
+      this._worktreeRepoRoots.delete(run.id);
     }
-  }
-
-  _loadDiskRuns() {
-    let entries;
-    try {
-      entries = readdirSync(this.logsDir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const id = entry.name;
-      const existing = this.runs.get(id);
-      if (existing && TERMINAL_STATUSES.has(existing.status)) continue;
-      const dir = path.join(this.logsDir, id);
-      const filePath = existsSync(path.join(dir, 'run.json'))
-        ? path.join(dir, 'run.json')
-        : path.join(dir, 'job.json');
-      try {
-        const run = JSON.parse(readFileSync(filePath, 'utf8'));
-        if (run.status === 'running' && !this.processes.has(id)) {
-          this._checkPidAlive(run);
-        }
-        this.runs.set(id, run);
-      } catch {
-        // skip directories without valid run.json
-      }
-    }
+    this._runs.updateRunStatus(run.id, {
+      status: run.status,
+      pid: run.pid,
+      completedAt: run.completedAt,
+      exitCode: run.exitCode,
+      signal: run.signal,
+    });
+    this.runs.delete(run.id);
   }
 
   _checkPidAlive(run) {
     try {
       process.kill(run.pid, 0);
     } catch {
-      run.status = 'failed';
+      run.status = RUN_STATUS.FAILED;
       run.completedAt = run.completedAt || new Date().toISOString();
       if (run.worktree) {
         try {
-          const repoRoot = run._worktreeRepoRoot || execFileSync('git', ['-C', run.worktree.dir, 'rev-parse', '--show-toplevel'], { stdio: 'pipe' }).toString().trim();
+          const repoRoot = this._worktreeRepoRoots.get(run.id)
+            || execFileSync('git', ['-C', run.worktree.dir, 'rev-parse', '--show-toplevel'], { stdio: 'pipe' }).toString().trim();
           removeWorktree(repoRoot, run.worktree.dir);
         } catch {}
+        this._worktreeRepoRoots.delete(run.id);
       }
-      this._persistRun(run);
+      this._runs.updateRunStatus(run.id, {
+        status: run.status,
+        pid: run.pid,
+        completedAt: run.completedAt,
+        exitCode: run.exitCode ?? null,
+        signal: run.signal ?? null,
+      });
     }
   }
 
@@ -301,9 +289,8 @@ class RunManager {
     }
     if (!files.length) return;
 
-    // Build substitution map for $ONESHOT_* env var references that agents
-    // may have written literally into spawn files (e.g. claude runtime agents
-    // that write JSON via tools instead of shell heredocs).
+    // Spawn JSON written via Claude tools (not shell heredocs) lands here
+    // with literal $ONESHOT_* refs that need substitution.
     const envSubs = {
       $ONESHOT_PATH: parentRun.options?.path,
       $ONESHOT_BRANCH: parentRun.options?.branch || parentRun.worktree?.branch,
@@ -315,7 +302,6 @@ class RunManager {
     for (const file of files) {
       try {
         const raw = readFileSync(path.join(spawnDir, file), 'utf8');
-        // Substitute $ONESHOT_* references before parsing
         const resolved = raw.replace(/\$ONESHOT_\w+/g, (match) =>
           envSubs[match] != null ? envSubs[match] : match
         );
@@ -328,7 +314,7 @@ class RunManager {
         this.dispatchRun(req.agent, opts)
           .then(({ run: spawnedRun }) => {
             spawnedRun.spawnedBy = parentRun.id;
-            this._persistRun(spawnedRun);
+            this._runs.setSpawnedBy(spawnedRun.id, parentRun.id);
           })
           .catch((err) => {
             console.error(`[spawn] failed to dispatch ${req.agent} from ${parentRun.id}: ${err.message}`);
@@ -337,68 +323,47 @@ class RunManager {
       } catch {}
     }
     if (spawned.length) {
-      parentRun.spawned = spawned.map(s => s.agent);
-      this._persistRun(parentRun);
-    }
-  }
-
-  _evictOldRuns() {
-    const completed = Array.from(this.runs.values())
-      .filter(r => r.status !== 'running' && r.status !== 'pending');
-    if (completed.length <= MAX_COMPLETED_RUNS) return;
-
-    completed.sort((a, b) => (a.completedAt || a.startedAt).localeCompare(b.completedAt || b.startedAt));
-    const toRemove = completed.length - MAX_COMPLETED_RUNS;
-    for (let i = 0; i < toRemove; i++) {
-      this.runs.delete(completed[i].id);
+      const names = spawned.map((s) => s.agent);
+      parentRun.spawned = names;
+      this._runs.setSpawned(parentRun.id, names);
     }
   }
 
   cleanupLogs(maxAgeMs) {
-    const cutoff = Date.now() - (maxAgeMs || 7 * 24 * 60 * 60 * 1000);
-    let entries;
-    try {
-      entries = readdirSync(this.logsDir, { withFileTypes: true });
-    } catch {
+    let cutoffMs;
+    if (maxAgeMs != null) {
+      cutoffMs = maxAgeMs;
+    } else if (process.env.ONESHOT_RUN_RETENTION_DAYS) {
+      const days = parseFloat(process.env.ONESHOT_RUN_RETENTION_DAYS);
+      if (!Number.isFinite(days) || days <= 0) return;
+      cutoffMs = days * 24 * 60 * 60 * 1000;
+    } else {
       return;
     }
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const dirPath = path.join(this.logsDir, entry.name);
-      const stat = statSync(dirPath);
-      if (stat.mtimeMs < cutoff) {
-        rmSync(dirPath, { recursive: true, force: true });
-      }
+
+    const cutoffIso = new Date(Date.now() - cutoffMs).toISOString();
+    const { logDirs } = this._runs.deleteRunsOlderThan(cutoffIso);
+    for (const dir of logDirs) {
+      try { rmSync(dir, { recursive: true, force: true }); } catch {}
     }
   }
 
   async clearRuns() {
-    this._loadDiskRuns();
-    const toClear = [];
-    for (const [id, run] of this.runs) {
-      if (run.status === 'running' || run.status === 'pending') continue;
-      toClear.push({ id, logDir: run.logDir });
-    }
+    const { logDirs } = this._runs.deleteCompletedRuns();
     await Promise.all(
-      toClear.map(({ id, logDir }) =>
-        (logDir ? rm(logDir, { recursive: true, force: true }).catch(() => {}) : Promise.resolve())
-          .then(() => this.runs.delete(id))
-      )
+      logDirs.map((dir) => rm(dir, { recursive: true, force: true }).catch(() => {}))
     );
-    return toClear.length;
+    return logDirs.length;
   }
 
   stopRun(id) {
     const run = this.getRun(id);
     if (!run) return { error: 'not_found' };
-    if (run.status !== 'running') return { error: 'not_running' };
+    if (run.status !== RUN_STATUS.RUNNING) return { error: 'not_running' };
 
     const child = this.processes.get(id);
-    if (child && child.pid) {
-      killGroup(child.pid, 'SIGTERM');
-    } else if (run.pid) {
-      killGroup(run.pid, 'SIGTERM');
-    }
+    if (child && child.pid) killGroup(child.pid, 'SIGTERM');
+    else if (run.pid) killGroup(run.pid, 'SIGTERM');
 
     return { ok: true };
   }
