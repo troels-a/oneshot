@@ -24,6 +24,8 @@ into an authenticated agent dispatch. Vercel is the first consumer.
   signature verification (used for Vercel).
 - A `vercel-deploy-notify` agent that calls the existing `notify` CLI on failed
   deployments and is silent otherwise.
+- A dashboard panel for managing webhook routes (list / create / edit /
+  delete), mirroring the existing schedules panel.
 - Keep the proxy thin: it authenticates and dispatches; it never interprets
   payload semantics. All "is this deployment erroneous?" logic lives in the
   agent.
@@ -32,28 +34,29 @@ into an authenticated agent dispatch. Vercel is the first consumer.
 
 - No per-route field mapping / payload templating (the raw body is forwarded as
   one arg; the agent parses it).
-- No UI for managing webhooks in the dashboard in this iteration (REST only).
 - No provider-specific parsing in the proxy beyond reading the signature header.
 - No replay/retry storage; Vercel's own retry behavior is relied upon.
 
 ## Architecture
 
-Two independent pieces.
+Three pieces: the proxy (core + server), the agent, and the dashboard panel.
 
 ### A. Webhook proxy (core + server)
 
 Modeled directly on the schedules implementation.
 
 - **core:** a `webhooks` SQLite table (new migration), a `createWebhooksRepo(db)`
-  (row↔object mapping + CRUD statements) mirroring `createSchedulesRepo`, and a
-  `WebhookStore` class mirroring `Scheduler` (in-memory `Map` hydrated from the
-  repo on load, id generation, HMAC verify helper). Exported from
-  `@oneshot/core`.
+  (row↔object mapping + CRUD statements, including a field-wise `updateWebhook`)
+  mirroring `createSchedulesRepo`, and a `WebhookStore` class mirroring
+  `Scheduler` (in-memory `Map` hydrated from the repo on load, id generation,
+  `createWebhook`/`updateWebhook`/`deleteWebhook`, HMAC verify helper). Exported
+  from `@oneshot/core`.
 - **server, public ingest:** `POST /webhooks/:id` — mounted **before** the auth
   middleware, alongside `/health`.
-- **server, authenticated CRUD:** `GET/POST/DELETE /agents/:agent/webhooks` and
-  `GET /agents/:agent/webhooks/:id` — behind the existing Bearer/session auth,
-  same pattern as `routes/schedules.js`.
+- **server, authenticated CRUD:** `GET/POST/PATCH/DELETE
+  /agents/:agent/webhooks` (+ `/:id`), and a global `GET /webhooks` (list all,
+  for the dashboard) — behind the existing Bearer/session auth, same pattern as
+  `routes/schedules.js`.
 
 The `WebhookStore` is constructed in `createApp()` next to the `Scheduler`,
 loaded from the db, and injected onto requests as `req.webhooks` (alongside
@@ -66,6 +69,13 @@ A `node` runtime agent at `agents/vercel-deploy-notify/agent.md`,
 deployment, calls `execFileSync('notify', [message])` — the same mechanism used
 by `domain-monitor` and `bynwr-cache-warmer`. Silent (exit 0, no notify) on all
 other events.
+
+### C. Dashboard panel
+
+A new `webhooks` view in the React dashboard, mirroring the schedules panel:
+a `WebhookCard` for each route and a `WebhookForm` for creating one, wired into
+`Dashboard.jsx` and a new top-level nav pill. Details in the Dashboard UI
+section below.
 
 ## Data Model
 
@@ -155,10 +165,64 @@ All behind existing auth, validated like schedules (agent must exist;
   secret) and the full ingest URL path `/webhooks/<id>`. → `201`.
 - `GET /agents/:agent/webhooks` — list routes for the agent. → `200`.
 - `GET /agents/:agent/webhooks/:id` — single route (404 if not owned by agent).
+- `PATCH /agents/:agent/webhooks/:id` — body `{ name?, enabled?, signingSecret?,
+  staticArgs? }`; updates only the provided fields. Passing `signingSecret: ""`
+  (or `null`) clears the secret (disables HMAC); a non-empty value rotates it.
+  The route `id`/ingest URL never changes. Returns the updated route (with
+  `hasSigningSecret`, no raw secret). → `200`.
 - `DELETE /agents/:agent/webhooks/:id` → `204`.
+- `GET /webhooks` — list all routes across agents (powers the dashboard global
+  view), mirroring `GET /schedules`. → `200`.
 
-(Update/PATCH is out of scope for v1 — delete and recreate. Add later if
-needed.)
+## Dashboard UI
+
+A new `webhooks` view added to `VIEWS` in `App.jsx` (with a `VIEW_HELP` entry
+and a nav pill), rendered by `Dashboard.jsx`. Follows the schedules panel
+structure exactly.
+
+**API client (`api.js`)** — add `fetchAllWebhooks()`, `fetchWebhooks(agent)`,
+`createWebhook(agent, data)`, `updateWebhook(agent, id, data)`, and
+`deleteWebhook(agent, id)`, mirroring the schedule helpers.
+
+**Ingest URL note:** the public ingest route is served at the server root
+(`/webhooks/<id>`), *not* under the dashboard's `/api` proxy prefix. The create
+response returns `ingestPath` (`/webhooks/<id>`); the dashboard renders the full
+URL by joining it with the API origin (same-origin in production behind the
+proxy; in dev the operator uses the API host, e.g. `http://localhost:3000`).
+
+**`WebhookCard.jsx`** — one card per route, modeled on `ScheduleCard`:
+- Header: route `name` (with `agent` subtitle) and an active/disabled status
+  pill.
+- Body: the full ingest URL with a **copy-to-clipboard** button — shown in full
+  because the dashboard is already authenticated and the operator needs the URL
+  to paste into Vercel; an
+  HMAC indicator (`signed` badge when `hasSigningSecret` is true); and the
+  last-triggered timestamp via the existing `timeAgo` helper.
+- Clicking the header toggles an inline edit form (same pattern as
+  `ScheduleCard`); a delete button with a confirm dialog.
+
+**`WebhookForm.jsx`** — used for both create and edit (`mode` prop), modeled on
+`ScheduleForm`:
+- Fields: agent selector (create only; fixed in edit), `name`, `enabled`
+  toggle (edit only), `signingSecret` (password input), and a `staticArgs` JSON
+  textarea validated client-side before submit.
+- In edit mode the secret field renders empty with a "leave blank to keep
+  current" placeholder; submitting blank omits `signingSecret` from the PATCH
+  (secret unchanged), and an explicit "clear secret" control sends
+  `signingSecret: ""` to disable HMAC. The raw secret is never pre-filled
+  because the API never returns it.
+- On successful create, surfaces the returned ingest URL prominently with a
+  copy button and a one-time note that the signing secret cannot be retrieved
+  later.
+
+**`Dashboard.jsx`** — add a `tab === 'webhooks'` branch that loads
+`fetchAllWebhooks()`, renders a "+ New Webhook" affordance plus the list of
+`WebhookCard`s, and refreshes on create/edit/delete — identical wiring to the
+schedules branch.
+
+No new dashboard test infrastructure exists (the package ships `eslint` +
+`vite build` only), so UI verification is `npm run lint` + `npm run
+build:dashboard` clean, plus manual smoke testing.
 
 ## Error Handling & Concurrency
 
@@ -216,16 +280,23 @@ Behavior:
     unknown id → `404`; disabled route → `404`.
   - Static-arg merge present in dispatched args.
   - CRUD: `401` without Bearer; create returns ingest URL + `hasSigningSecret`
-    and never the raw secret; delete → `204`.
+    and never the raw secret; PATCH updates only provided fields, rotates the
+    secret on a non-empty value, and clears it on `""`; delete → `204`;
+    `GET /webhooks` lists routes across agents.
+  - Store unit test: `updateWebhook` patches fields without changing `id`.
 - **agent:** invoke the script with a `deployment.error` payload (asserts a
   stubbed `notify` on `PATH` is called with the expected message) and a
   `deployment.succeeded` payload (asserts `notify` is not called); a no-payload
   invocation exits non-zero.
+- **dashboard:** no unit-test infra in the package, so verification is a clean
+  `npm run lint` and `npm run build:dashboard`, plus manual smoke testing of
+  create → copy URL → edit (rename, rotate/clear secret, toggle enabled) →
+  delete.
 
 ## Operational Notes
 
-- After deploy, create the route via
-  `POST /agents/vercel-deploy-notify/webhooks` with a `signingSecret` matching
+- After deploy, create the route — via the dashboard Webhooks panel or
+  `POST /agents/vercel-deploy-notify/webhooks` — with a `signingSecret` matching
   the secret configured in the Vercel dashboard, then register the returned
   `/webhooks/<id>` URL as the Vercel webhook endpoint.
 - `CLAUDE.md` gets a short "Webhooks" section documenting the route concept and
