@@ -21,6 +21,10 @@ function createApp(options = {}) {
   const logsDir = options.logsDir || resolveLogsDir();
   const apiKey = process.env.ONESHOT_API_KEY;
   const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
+  // Public base URL where the server's routes are reachable from the internet
+  // (scheme + host, plus any path prefix). Used to build full webhook ingest
+  // URLs; when unset the dashboard falls back to the page origin.
+  const publicUrl = options.publicUrl || process.env.ONESHOT_PUBLIC_URL || '';
   const sessionSecret = options.sessionSecret || loadOrCreateSecret(DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
@@ -53,6 +57,7 @@ function createApp(options = {}) {
     req.runManager = manager;
     req.scheduler = scheduler;
     req.webhooks = webhooks;
+    req.publicUrl = publicUrl;
     req.checkRuntimeAvailability = checkAvailability;
     next();
   });

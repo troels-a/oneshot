@@ -50,7 +50,12 @@ function setup(options = {}) {
   const app = express();
   app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
   app.use(createIngestRouter({ runManager: manager, webhooks, agentsDir }));
-  app.use((req, res, next) => { req.webhooks = webhooks; req.agentsDir = agentsDir; next(); });
+  app.use((req, res, next) => {
+    req.webhooks = webhooks;
+    req.agentsDir = agentsDir;
+    req.publicUrl = options.publicUrl;
+    next();
+  });
   app.use(adminRouter);
   return { app, webhooks, manager, agentsDir };
 }
@@ -157,7 +162,15 @@ describe('webhooks CRUD', () => {
     assert.strictEqual(res.body.hasSigningSecret, true);
     assert.strictEqual(res.body.signingSecret, undefined);
     assert.match(res.body.ingestPath, /^\/webhooks\/[0-9a-f]{32}$/);
+    assert.strictEqual(res.body.ingestUrl, null);
     assert.deepStrictEqual(res.body.staticArgs, { channel: 'ops' });
+  });
+
+  it('builds a full ingestUrl from the configured public base', async () => {
+    const { app } = setup({ publicUrl: 'https://api.example.com/' });
+    const res = await request(app).post('/agents/vercel-deploy-notify/webhooks').send({ name: 'p' });
+    assert.strictEqual(res.status, 201);
+    assert.match(res.body.ingestUrl, /^https:\/\/api\.example\.com\/webhooks\/[0-9a-f]{32}$/);
   });
 
   it('404s creating a webhook for a missing agent', async () => {

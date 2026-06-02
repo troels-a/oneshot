@@ -230,3 +230,4 @@ Configure in `.env` (see `.env.example`):
 - `ONESHOT_API_PORT` — Server port (default: 3000)
 - `ONESHOT_AGENTS_DIR` — Path to agents directory (default: ./agents)
 - `ONESHOT_WORKSPACE_DIR` — Base directory for resolving relative `--path` values in dispatch requests
+- `ONESHOT_PUBLIC_URL` — Public base URL where the server is reachable from the internet (scheme + host, plus any path prefix). Used to build the full webhook ingest URL shown in the dashboard. Leave blank for same-origin deployments (the dashboard then falls back to the page origin).

@@ -79,7 +79,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       const created = await createWebhook(agent, { name, signingSecret, staticArgs });
       const allWebhooks = await fetchAllWebhooks();
       setWebhooks(allWebhooks);
-      setCreatedWebhookUrl(`${window.location.origin}${created.ingestPath}`);
+      setCreatedWebhookUrl(created.ingestUrl || `${window.location.origin}${created.ingestPath}`);
     } catch (err) {
       setWebhookError(err.message);
     } finally {

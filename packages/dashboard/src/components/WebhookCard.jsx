@@ -14,6 +14,9 @@ function timeAgo(iso) {
 }
 
 function ingestUrl(webhook) {
+  // Prefer the full URL the server built from ONESHOT_PUBLIC_URL; fall back to
+  // the page origin for same-origin deployments where it isn't configured.
+  if (webhook.ingestUrl) return webhook.ingestUrl;
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   return `${origin}${webhook.ingestPath}`;
 }

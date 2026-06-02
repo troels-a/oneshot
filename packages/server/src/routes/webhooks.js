@@ -6,7 +6,14 @@ const validateParams = require('../middleware/validate-params');
 
 // Shape returned by the authenticated CRUD API. The raw signing secret is never
 // echoed back — callers get a boolean instead.
-function serializeWebhook(w) {
+//
+// `ingestPath` is always the relative route. `ingestUrl` is the full, public,
+// ready-to-paste URL when the deployment has configured its public base via
+// ONESHOT_PUBLIC_URL; otherwise it is null and the client falls back to the
+// page origin.
+function serializeWebhook(w, baseUrl) {
+  const ingestPath = `/webhooks/${w.id}`;
+  const base = typeof baseUrl === 'string' ? baseUrl.replace(/\/+$/, '') : '';
   return {
     id: w.id,
     agent: w.agent,
@@ -14,7 +21,8 @@ function serializeWebhook(w) {
     enabled: !!w.enabled,
     hasSigningSecret: !!w.signingSecret,
     staticArgs: w.staticArgs || {},
-    ingestPath: `/webhooks/${w.id}`,
+    ingestPath,
+    ingestUrl: base ? `${base}${ingestPath}` : null,
     createdAt: w.createdAt,
     lastTriggeredAt: w.lastTriggeredAt ?? null,
     lastRunId: w.lastRunId ?? null,
@@ -113,11 +121,11 @@ function createIngestRouter({ runManager, webhooks, agentsDir }) {
 const adminRouter = Router();
 
 adminRouter.get('/webhooks', (req, res) => {
-  res.json({ webhooks: req.webhooks.listAll().map(serializeWebhook) });
+  res.json({ webhooks: req.webhooks.listAll().map((w) => serializeWebhook(w, req.publicUrl)) });
 });
 
 adminRouter.get('/agents/:agent/webhooks', validateParams, (req, res) => {
-  res.json({ webhooks: req.webhooks.listWebhooks(req.params.agent).map(serializeWebhook) });
+  res.json({ webhooks: req.webhooks.listWebhooks(req.params.agent).map((w) => serializeWebhook(w, req.publicUrl)) });
 });
 
 adminRouter.post('/agents/:agent/webhooks', validateParams, (req, res, next) => {
@@ -135,7 +143,7 @@ adminRouter.post('/agents/:agent/webhooks', validateParams, (req, res, next) => 
       signingSecret: body.signingSecret || undefined,
       staticArgs: body.staticArgs || undefined,
     });
-    res.status(201).json(serializeWebhook(webhook));
+    res.status(201).json(serializeWebhook(webhook, req.publicUrl));
   } catch (err) {
     if (err.message && /maximum/i.test(err.message)) {
       return res.status(400).json({ error: err.message });
@@ -149,7 +157,7 @@ adminRouter.get('/agents/:agent/webhooks/:id', validateParams, (req, res) => {
   if (!webhook || webhook.agent !== req.params.agent) {
     return res.status(404).json({ error: 'Webhook not found' });
   }
-  res.json(serializeWebhook(webhook));
+  res.json(serializeWebhook(webhook, req.publicUrl));
 });
 
 adminRouter.patch('/agents/:agent/webhooks/:id', validateParams, (req, res, next) => {
@@ -169,7 +177,7 @@ adminRouter.patch('/agents/:agent/webhooks/:id', validateParams, (req, res, next
     if (body.staticArgs !== undefined) updates.staticArgs = body.staticArgs;
 
     const updated = req.webhooks.updateWebhook(req.params.id, updates);
-    res.json(serializeWebhook(updated));
+    res.json(serializeWebhook(updated, req.publicUrl));
   } catch (err) {
     next(err);
   }
