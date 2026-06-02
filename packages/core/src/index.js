@@ -24,6 +24,8 @@ module.exports = {
   createWorktree: require('./worktree').createWorktree,
   removeWorktree: require('./worktree').removeWorktree,
   Scheduler: require('./scheduler'),
+  WebhookStore: require('./webhook-store').WebhookStore,
+  verifyVercelSignature: require('./webhook-store').verifyVercelSignature,
   DEFAULT_TIMEOUT_SEC: dispatchOptions.DEFAULT_TIMEOUT_SEC,
   DISPATCH_OPTIONS: dispatchOptions.DISPATCH_OPTIONS,
   DISPATCH_OPTION_KEYS: dispatchOptions.DISPATCH_OPTION_KEYS,

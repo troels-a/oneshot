@@ -21,16 +21,15 @@ describe('db migrations', () => {
     const dir = path.join(TMP, 'fresh');
     const db = openDb(dir);
     const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`).all().map((r) => r.name);
-    assert.deepStrictEqual(tables, ['log_lines', 'runs', 'schedules', 'schema_version']);
+    assert.deepStrictEqual(tables, ['log_lines', 'runs', 'schedules', 'schema_version', 'webhooks']);
     closeDb(dir);
   });
 
   it('records the applied version', () => {
     const dir = path.join(TMP, 'records-version');
     const db = openDb(dir);
-    const rows = db.prepare('SELECT version FROM schema_version').all();
-    assert.strictEqual(rows.length, 1);
-    assert.strictEqual(rows[0].version, 1);
+    const rows = db.prepare('SELECT version FROM schema_version ORDER BY version').all();
+    assert.deepStrictEqual(rows.map((r) => r.version), [1, 2]);
     closeDb(dir);
   });
 
@@ -40,7 +39,7 @@ describe('db migrations', () => {
     closeDb(dir);
     const db = openDb(dir);
     const rows = db.prepare('SELECT COUNT(*) AS n FROM schema_version').get();
-    assert.strictEqual(rows.n, 1);
+    assert.strictEqual(rows.n, 2);
     closeDb(dir);
   });
 
