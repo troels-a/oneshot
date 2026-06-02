@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchAgents, fetchRuns, fetchAllSchedules, clearRuns, createSchedule } from '../api';
+import { fetchAgents, fetchRuns, fetchAllSchedules, fetchAllWebhooks, clearRuns, createSchedule, createWebhook } from '../api';
 import RunCard from './RunCard';
 import ScheduleCard from './ScheduleCard';
 import ScheduleForm from './ScheduleForm';
+import WebhookCard from './WebhookCard';
+import WebhookForm from './WebhookForm';
 
 const REFRESH_INTERVAL = 5000;
 const PAGE_SIZE = 25;
@@ -18,6 +20,11 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [creatingSchedule, setCreatingSchedule] = useState(false);
   const [createSaving, setCreateSaving] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [webhooks, setWebhooks] = useState([]);
+  const [creatingWebhook, setCreatingWebhook] = useState(false);
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookError, setWebhookError] = useState('');
+  const [createdWebhookUrl, setCreatedWebhookUrl] = useState('');
 
   const loadData = useCallback(async () => {
     try {
@@ -31,6 +38,11 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       if (tab === 'schedules') {
         const allSchedules = await fetchAllSchedules();
         setSchedules(allSchedules);
+      }
+
+      if (tab === 'webhooks') {
+        const allWebhooks = await fetchAllWebhooks();
+        setWebhooks(allWebhooks);
       }
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -58,6 +70,27 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
     } finally {
       setCreateSaving(false);
     }
+  }
+
+  async function handleCreateWebhook({ agent, name, signingSecret, staticArgs }) {
+    setWebhookSaving(true);
+    setWebhookError('');
+    try {
+      const created = await createWebhook(agent, { name, signingSecret, staticArgs });
+      const allWebhooks = await fetchAllWebhooks();
+      setWebhooks(allWebhooks);
+      setCreatedWebhookUrl(`${window.location.origin}${created.ingestPath}`);
+    } catch (err) {
+      setWebhookError(err.message);
+    } finally {
+      setWebhookSaving(false);
+    }
+  }
+
+  function closeWebhookCreate() {
+    setCreatingWebhook(false);
+    setWebhookError('');
+    setCreatedWebhookUrl('');
   }
 
   async function handleClear() {
@@ -214,6 +247,57 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'webhooks' && (
+        <div>
+          <div className="filters" style={{ marginBottom: 16 }}>
+            <span className="section-badge">{webhooks.length} webhooks</span>
+            {!creatingWebhook && agents.length > 0 && (
+              <button
+                className="btn btn-sm btn-dark"
+                onClick={() => { setWebhookError(''); setCreatedWebhookUrl(''); setCreatingWebhook(true); }}
+              >
+                + New Webhook
+              </button>
+            )}
+          </div>
+          {creatingWebhook && (
+            <div style={{ marginBottom: 16 }}>
+              <div className="run-card">
+                <div className="run-card-header">
+                  <div className="run-card-left">
+                    <span className="run-card-agent">New webhook</span>
+                  </div>
+                </div>
+                <WebhookForm
+                  mode="create"
+                  agents={agents}
+                  createdUrl={createdWebhookUrl}
+                  onSubmit={handleCreateWebhook}
+                  onCancel={closeWebhookCreate}
+                  saving={webhookSaving}
+                  error={webhookError}
+                />
+              </div>
+            </div>
+          )}
+          {webhooks.length === 0 && !creatingWebhook ? (
+            <p className="empty">No webhooks found</p>
+          ) : (
+            <div className="run-card-list run-card-list--plain">
+              {webhooks.map((w) => (
+                <div key={w.id} className="run-card-wrapper">
+                  <WebhookCard
+                    webhook={w}
+                    agents={agents}
+                    onUpdate={() => fetchAllWebhooks().then(all => setWebhooks(all))}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </div>
