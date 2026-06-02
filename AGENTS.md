@@ -142,6 +142,45 @@ curl -X POST http://localhost:3000/agents/my-agent/schedules \
 
 Only one instance of an agent runs at a time. Scheduled runs are skipped if the previous run is still executing. To allow concurrent runs, set `multi_instance: true` in the agent's frontmatter.
 
+### Webhooks
+
+A webhook route turns an inbound public HTTP POST into an agent dispatch, so
+external services (e.g. Vercel deployment events) can trigger an agent without
+holding the API key. Routes are managed through the authenticated CRUD API or
+the dashboard **Webhooks** panel:
+
+```bash
+curl -X POST http://localhost:3000/agents/my-agent/webhooks \
+  -H "Authorization: Bearer $ONESHOT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "vercel-prod", "signingSecret": "<secret>", "staticArgs": {"channel": "ops"}}'
+```
+
+The response includes an `ingestPath` (`/webhooks/<id>`); register
+`<server-origin>/webhooks/<id>` as the external webhook URL. The route `id` is a
+random, unguessable token and serves as baseline auth — the raw `signingSecret`
+is never returned by the API (responses expose `hasSigningSecret` instead).
+
+The **public** ingest endpoint is unauthenticated:
+
+```
+POST /webhooks/:id
+```
+
+- If the route has a `signingSecret`, the request must carry a matching
+  `x-vercel-signature` header (HMAC-SHA1 of the raw body); otherwise the request
+  is rejected with `401`. Without a secret, the unguessable URL is the only gate.
+- On success the proxy dispatches the route's agent with
+  `args = { ...staticArgs, event: <body.type>, payload: <raw JSON string> }` and
+  returns `202`. A busy single-instance agent yields `200 {skipped:true}` (so
+  providers don't retry).
+
+CRUD endpoints: `GET /webhooks` (all), `GET/POST /agents/:agent/webhooks`,
+`GET/PATCH/DELETE /agents/:agent/webhooks/:id`. On PATCH, an omitted
+`signingSecret` is left unchanged, `""` clears it (disables HMAC), and a value
+rotates it. The bundled `vercel-deploy-notify` agent parses the forwarded
+payload and sends a `notify` message on `deployment.error`.
+
 ### Spawning
 
 Agents can spawn follow-up agents by writing JSON files to `$ONESHOT_SPAWN_DIR`. This environment variable is set automatically for every run and points to a run-specific directory (`<logDir>/spawns/`). After the current run completes and its worktree is cleaned up, the run manager reads all `.json` files from the spawn dir and dispatches each one.
