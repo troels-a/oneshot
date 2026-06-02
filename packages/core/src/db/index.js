@@ -52,10 +52,12 @@ function closeDb(dataDir) {
 function createRepos(db) {
   const { createRunsRepo } = require('./runs');
   const { createSchedulesRepo } = require('./schedules');
+  const { createWebhooksRepo } = require('./webhooks');
   const { createLogsRepo } = require('./logs');
   return {
     runs: createRunsRepo(db),
     schedules: createSchedulesRepo(db),
+    webhooks: createWebhooksRepo(db),
     logs: createLogsRepo(db),
   };
 }

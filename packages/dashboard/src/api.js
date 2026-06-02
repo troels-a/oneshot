@@ -109,6 +109,40 @@ export async function deleteSchedule(agent, scheduleId) {
   });
 }
 
+export async function fetchAllWebhooks() {
+  const res = await request('/webhooks');
+  const data = await res.json();
+  return data.webhooks;
+}
+
+export async function fetchWebhooks(agent) {
+  const res = await request(`/agents/${agent}/webhooks`);
+  const data = await res.json();
+  return data.webhooks;
+}
+
+export async function createWebhook(agent, data) {
+  const res = await request(`/agents/${agent}/webhooks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function updateWebhook(agent, id, data) {
+  const res = await request(`/agents/${agent}/webhooks/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function deleteWebhook(agent, id) {
+  await request(`/agents/${agent}/webhooks/${id}`, { method: 'DELETE' });
+}
+
 export async function clearRuns() {
   const res = await request('/runs', { method: 'DELETE' });
   return res.json();

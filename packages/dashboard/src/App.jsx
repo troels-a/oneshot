@@ -22,12 +22,13 @@ function Logo() {
   );
 }
 
-const VIEWS = ['runs', 'agents', 'schedules'];
+const VIEWS = ['runs', 'agents', 'schedules', 'webhooks'];
 
 const VIEW_HELP = {
   runs: 'View and manage all agent runs — filter by status or agent, kill active runs, and inspect logs.',
   agents: 'Browse registered agents, see their runtime type, and check recent run activity.',
   schedules: 'Manage cron-based schedules for each agent — view timing, toggle enabled state, and check results.',
+  webhooks: 'Manage inbound webhook routes that dispatch an agent — copy the ingest URL, rotate signing secrets, and toggle routes.',
 };
 
 export default function App() {

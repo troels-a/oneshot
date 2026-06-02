@@ -3,7 +3,7 @@ const path = require('path');
 const { mkdirSync } = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
-const { RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, checkRuntimeAvailability, openDb } = require('@oneshot/core');
+const { RunManager, Scheduler, WebhookStore, resolveAgentsDir, resolveLogsDir, DATA_DIR, checkRuntimeAvailability, openDb } = require('@oneshot/core');
 const { loadOrCreateSecret } = require('./lib/sessions');
 const createAuthMiddleware = require('./middleware/auth');
 const healthRouter = require('./routes/health');
@@ -13,6 +13,7 @@ const runsRouter = require('./routes/runs');
 const schedulesRouter = require('./routes/schedules');
 const statsRouter = require('./routes/stats');
 const filesRouter = require('./routes/files');
+const { createIngestRouter, adminRouter: webhooksAdminRouter } = require('./routes/webhooks');
 const createAuthRouter = require('./routes/auth');
 
 function createApp(options = {}) {
@@ -20,6 +21,10 @@ function createApp(options = {}) {
   const logsDir = options.logsDir || resolveLogsDir();
   const apiKey = process.env.ONESHOT_API_KEY;
   const dashboardPassword = process.env.ONESHOT_DASHBOARD_PASSWORD;
+  // Public base URL where the server's routes are reachable from the internet
+  // (scheme + host, plus any path prefix). Used to build full webhook ingest
+  // URLs; when unset the dashboard falls back to the page origin.
+  const publicUrl = options.publicUrl || process.env.ONESHOT_PUBLIC_URL || '';
   const sessionSecret = options.sessionSecret || loadOrCreateSecret(DATA_DIR);
 
   mkdirSync(logsDir, { recursive: true });
@@ -29,13 +34,18 @@ function createApp(options = {}) {
   manager.recoverInflightRuns();
   const scheduler = new Scheduler({ db, runManager: manager, agentsDir });
   scheduler.loadFromDb();
+  const webhooks = new WebhookStore({ db });
+  webhooks.loadFromDb();
 
   const app = express();
-  app.use(express.json());
+  // Capture the raw body so webhook signature verification can HMAC the exact
+  // received bytes; existing JSON routes are unaffected.
+  app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
-  // Health + login — no auth
+  // Health + login + public webhook ingest — no auth
   app.use(healthRouter);
   app.use(createAuthRouter({ dashboardPassword, sessionSecret }));
+  app.use(createIngestRouter({ runManager: manager, webhooks, agentsDir }));
 
   // Auth for everything else
   app.use(createAuthMiddleware(apiKey, sessionSecret));
@@ -46,6 +56,8 @@ function createApp(options = {}) {
     req.agentsDir = agentsDir;
     req.runManager = manager;
     req.scheduler = scheduler;
+    req.webhooks = webhooks;
+    req.publicUrl = publicUrl;
     req.checkRuntimeAvailability = checkAvailability;
     next();
   });
@@ -53,6 +65,7 @@ function createApp(options = {}) {
   app.use(agentsRouter);
   app.use(runtimesRouter);
   app.use(schedulesRouter);
+  app.use(webhooksAdminRouter);
   app.use(runsRouter);
   app.use(statsRouter);
   app.use(filesRouter);
@@ -63,7 +76,7 @@ function createApp(options = {}) {
     res.status(500).json({ error: 'Internal server error' });
   });
 
-  return { app, manager, scheduler };
+  return { app, manager, scheduler, webhooks };
 }
 
 if (require.main === module) {
