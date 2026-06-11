@@ -144,6 +144,31 @@ describe('worktree', () => {
     removeWorktree(repoDir, result.worktreeDir);
   });
 
+  it('creates worktree when the default branch is master, not main', () => {
+    const originDir = path.join(TMP, 'origin-master');
+    const repoDir = path.join(TMP, 'repo-master');
+    // Origin and repo both default to `master` — no `main` ref exists anywhere.
+    mkdirSync(originDir, { recursive: true });
+    execFileSync('git', ['init', '--bare', '--initial-branch=master', originDir], { stdio: 'pipe' });
+    mkdirSync(repoDir, { recursive: true });
+    execFileSync('git', ['init', '--initial-branch=master', repoDir], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'config', 'user.email', 'test@test.com'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'config', 'user.name', 'Test'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'config', 'core.hooksPath', '/dev/null'], { stdio: 'pipe' });
+    writeFileSync(path.join(repoDir, 'base.txt'), 'on master');
+    execFileSync('git', ['-C', repoDir, 'add', 'base.txt'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'init'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'remote', 'add', 'origin', originDir], { stdio: 'pipe' });
+    execFileSync('git', ['-C', repoDir, 'push', 'origin', 'master'], { stdio: 'pipe' });
+
+    const result = createWorktree(repoDir, 'run-master', 'agent', DATA, 'brief/some-work');
+
+    assert.strictEqual(result.branch, 'brief/some-work');
+    assert.ok(existsSync(path.join(result.worktreeDir, 'base.txt')), 'worktree should be based on the master default branch');
+
+    removeWorktree(repoDir, result.worktreeDir);
+  });
+
   it('pulls latest main before creating worktree', () => {
     const originDir = path.join(TMP, 'origin-pull');
     const repoDir = path.join(TMP, 'repo-pull');
