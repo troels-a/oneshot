@@ -41,7 +41,9 @@ const runtimeOptions = [
 ];
 
 function normalizeMaxTurns(value) {
-  const parsed = Number.parseInt(value, 10);
+  const normalized = String(value).trim();
+  if (!/^\d+$/.test(normalized)) return DEFAULT_MAX_TURNS;
+  const parsed = Number.parseInt(normalized, 10);
   if (!Number.isInteger(parsed) || parsed <= 0) return DEFAULT_MAX_TURNS;
   return String(parsed);
 }

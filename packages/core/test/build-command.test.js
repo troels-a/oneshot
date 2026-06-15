@@ -137,6 +137,11 @@ describe('buildCommand', () => {
     assert.strictEqual(args[args.indexOf('--max-turns') + 1], '5');
   });
 
+  it('falls back to default vibe max turns for partially numeric input', () => {
+    const { args } = buildCommand('vibe', agentDir, 'do stuff', {}, { maxTurns: '5abc' });
+    assert.strictEqual(args[args.indexOf('--max-turns') + 1], '5');
+  });
+
   it('throws on unknown runtime', () => {
     assert.throws(() => buildCommand('python', agentDir, '', {}), /Unknown runtime/);
   });
