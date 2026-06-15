@@ -29,6 +29,22 @@ describe('buildCommand', () => {
     assert.deepStrictEqual(args, ['-a', 'never', 'exec', '--skip-git-repo-check', '--json', '-s', 'workspace-write', 'do stuff']);
   });
 
+  it('builds vibe command with defaults', () => {
+    const { cmd, args } = buildCommand('vibe', agentDir, 'do stuff', {});
+    assert.strictEqual(cmd, 'vibe');
+    assert.deepStrictEqual(args, [
+      '--prompt',
+      'do stuff',
+      '--max-turns',
+      '5',
+      '--output',
+      'json',
+      '--agent',
+      'auto-approve',
+      '--trust',
+    ]);
+  });
+
   it('builds node command with temp file', () => {
     const script = 'console.log("hello");';
     const { cmd, args, cleanup } = buildCommand('node', agentDir, script, { foo: 'bar' });
@@ -88,6 +104,37 @@ describe('buildCommand', () => {
   it('omits -m when codex model is blank', () => {
     const { args } = buildCommand('codex', agentDir, 'do stuff', {}, { model: '' });
     assert.strictEqual(args.indexOf('-m'), -1);
+  });
+
+  it('builds vibe command with runtime options', () => {
+    const { cmd, args } = buildCommand('vibe', agentDir, 'review the code', {}, {
+      maxTurns: '12',
+      agent: 'accept-edits',
+      trust: false,
+      enabledTools: 'bash*, re:^serena_.*$\nedit_file',
+    });
+    assert.strictEqual(cmd, 'vibe');
+    assert.deepStrictEqual(args, [
+      '--prompt',
+      'review the code',
+      '--max-turns',
+      '12',
+      '--output',
+      'json',
+      '--agent',
+      'accept-edits',
+      '--enabled-tools',
+      'bash*',
+      '--enabled-tools',
+      're:^serena_.*$',
+      '--enabled-tools',
+      'edit_file',
+    ]);
+  });
+
+  it('falls back to default vibe max turns when invalid', () => {
+    const { args } = buildCommand('vibe', agentDir, 'do stuff', {}, { maxTurns: '-4' });
+    assert.strictEqual(args[args.indexOf('--max-turns') + 1], '5');
   });
 
   it('throws on unknown runtime', () => {

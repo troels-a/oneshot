@@ -4,7 +4,7 @@ This document tells coding agents (Claude, Copilot, etc.) how to create and modi
 
 ## Project Overview
 
-Oneshot is a run scheduling and execution platform for autonomous agents. Agents are CLI programs (Claude prompts, Node.js scripts, or Bash scripts) that can be run on-demand or on a cron schedule via a REST API and web dashboard.
+Oneshot is a run scheduling and execution platform for autonomous agents. Agents are CLI programs (Claude, Codex, or Mistral Vibe prompts, Node.js scripts, or Bash scripts) that can be run on-demand or on a cron schedule via a REST API and web dashboard.
 
 ## Monorepo Structure
 
@@ -26,7 +26,7 @@ agents/
     helpers.js        # Optional — supporting files (any runtime)
 ```
 
-Each agent is a single `agent.md` file. The body of the file is the program: a prompt for `claude`, JavaScript for `node`, or a shell script for `bash`. Supporting files can be added to the directory for `require()` or `source` usage.
+Each agent is a single `agent.md` file. The body of the file is the program: a prompt for `claude`, `codex`, or `vibe`, JavaScript for `node`, or a shell script for `bash`. Supporting files can be added to the directory for `require()` or `source` usage.
 
 ### agent.md Format
 
@@ -34,7 +34,7 @@ The file uses YAML frontmatter followed by a body:
 
 ```yaml
 ---
-runtime: claude|node|bash
+runtime: claude|codex|vibe|node|bash
 args:
   - name: arg_name
     description: What this argument does
@@ -66,6 +66,34 @@ commands:
 ---
 
 Today is {{ commands.date }}. Please {{ args.task }}.
+```
+
+**`codex`** — The body becomes the prompt passed to `codex exec`. Best for Codex coding tasks.
+
+```yaml
+---
+runtime: codex
+runtimeOptions:
+  sandboxMode: workspace-write
+  approvalPolicy: never
+---
+
+Review the current branch and fix the bug.
+```
+
+**`vibe`** — The body becomes the prompt passed to `vibe --prompt`. Best for Mistral Vibe coding tasks. Vibe must be installed and configured with its config/env key before dispatch.
+
+```yaml
+---
+runtime: vibe
+runtimeOptions:
+  maxTurns: 5
+  agent: auto-approve
+  trust: true
+  enabledTools: "bash*, edit_file"
+---
+
+Review the current branch and make the requested change.
 ```
 
 **`node`** — The body is JavaScript, executed via `node`. Args are passed as `--key value` flags. Best for programmatic tasks.
