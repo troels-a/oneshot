@@ -58,6 +58,18 @@ function runToInsertParams(run) {
   };
 }
 
+// A bad `limit` must never silently degrade to "read the whole table" — that is
+// the exact failure this pagination exists to prevent. Absent means unbounded;
+// anything present must be a non-negative number or it throws.
+function toBound(value, absent, name) {
+  if (value == null) return absent;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new TypeError(`listRuns: ${name} must be a non-negative number, got ${JSON.stringify(value)}`);
+  }
+  return Math.trunc(n);
+}
+
 function createRunsRepo(db) {
   const insertStmt = db.prepare(`INSERT INTO runs (
     id, agent_name, runtime, source, status,
@@ -121,6 +133,10 @@ function createRunsRepo(db) {
   const countByAgentStmt = db.prepare('SELECT COUNT(*) AS c FROM runs WHERE agent_name = ?');
   const countByStatusAgentStmt = db.prepare('SELECT COUNT(*) AS c FROM runs WHERE status = ? AND agent_name = ?');
   const countGroupedStmt = db.prepare('SELECT status, COUNT(*) AS c FROM runs GROUP BY status');
+  const countByAgentGroupedStmt = db.prepare(`SELECT agent_name,
+      COUNT(*) AS c,
+      SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) AS running
+    FROM runs GROUP BY agent_name`);
 
   const deleteCompletedStmt = db.prepare(`DELETE FROM runs WHERE status NOT IN ('running','pending')`);
   const listCompletedIdsLogDirsStmt = db.prepare(`SELECT id, log_dir FROM runs WHERE status NOT IN ('running','pending')`);
@@ -179,8 +195,8 @@ function createRunsRepo(db) {
     listRuns({ status, agent, limit, offset } = {}) {
       // SQLite reads a negative LIMIT as "no limit", so the same prepared
       // statement serves both the paged and unpaged callers.
-      const lim = Number.isInteger(limit) && limit >= 0 ? limit : -1;
-      const off = Number.isInteger(offset) && offset > 0 ? offset : 0;
+      const lim = toBound(limit, -1, 'limit');
+      const off = toBound(offset, 0, 'offset');
 
       let rows;
       if (status && agent) rows = listByStatusAgentStmt.all(status, agent, lim, off);
@@ -197,9 +213,20 @@ function createRunsRepo(db) {
       return countAllStmt.get().c;
     },
 
+    // Note: a run that has just exited is still 'running' here for the moment
+    // between the child closing and _finalizeRun writing its terminal status,
+    // so these counts can trail RunManager's in-memory view very briefly.
     countRunsByStatus() {
       const counts = {};
       for (const row of countGroupedStmt.all()) counts[row.status] = row.c;
+      return counts;
+    },
+
+    countRunsByAgent() {
+      const counts = {};
+      for (const row of countByAgentGroupedStmt.all()) {
+        counts[row.agent_name] = { total: row.c, running: row.running };
+      }
       return counts;
     },
 
