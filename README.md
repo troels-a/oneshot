@@ -163,13 +163,16 @@ Only one instance of an agent runs at a time. Returns `409` if already running.
 ### Runs
 
 ```
-GET    /runs                          # List runs (filter: ?status=running&agent=name)
+GET    /runs                          # List runs (?status=running&agent=name&limit=50&offset=0)
 GET    /runs/:id                      # Get run details
 GET    /runs/:id/logs                 # List log files
 GET    /runs/:id/logs/:file           # Stream log content (?offset=0&limit=50)
 POST   /runs/:id/stop                 # Stop a running agent
 DELETE /runs                          # Clear completed/failed runs
 ```
+
+`GET /runs` is paginated: it returns `{ "runs": [...], "total": 0, "limit": 50, "offset": 0 }`.
+`limit` defaults to 50 and is capped at 500; `total` is the unpaged count for the active filters.
 
 ### Schedules
 
