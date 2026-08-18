@@ -2,12 +2,34 @@ const { Router } = require('express');
 const { STREAM_FILENAMES, streamForFilename } = require('@oneshot/core/src/constants');
 const router = Router();
 
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 500;
+
+function parseLimit(raw) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_LIMIT;
+  return Math.min(n, MAX_LIMIT);
+}
+
+function parseOffset(raw) {
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
 router.get('/runs', (req, res) => {
-  const runs = req.runManager.listRuns({
-    status: req.query.status,
-    agent: req.query.agent,
+  const filters = { status: req.query.status, agent: req.query.agent };
+  const limit = parseLimit(req.query.limit);
+  const offset = parseOffset(req.query.offset);
+
+  // `total` is the unpaged count for these filters — the dashboard needs it to
+  // size the pager without fetching every run.
+  res.json({
+    runs: req.runManager.listRuns({ ...filters, limit, offset }),
+    total: req.runManager.countRuns(filters),
+    limit,
+    offset,
   });
-  res.json(runs);
 });
 
 router.get('/runs/:id', (req, res) => {
