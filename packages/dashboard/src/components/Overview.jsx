@@ -39,8 +39,9 @@ export default function Overview({ onSelectRun }) {
 
   const loadData = useCallback(async () => {
     try {
-      const runList = await fetchRuns({});
-      setRuns(runList.sort((a, b) => new Date(b.startedAt || 0) - new Date(a.startedAt || 0)));
+      // The stream only ever shows the newest 50, so ask for exactly that.
+      const runPage = await fetchRuns({ limit: 50 });
+      setRuns(runPage.runs);
     } catch (err) {
       console.error('Failed to load overview data:', err);
     } finally {
@@ -56,7 +57,7 @@ export default function Overview({ onSelectRun }) {
 
   if (loading) return <div className="loading">Loading...</div>;
 
-  const recentRuns = runs.slice(0, 50);
+  const recentRuns = runs;
 
   return (
     <div className="glass-card">
