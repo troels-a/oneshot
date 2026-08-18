@@ -3,6 +3,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 const { discoverAgents, parseAgentMd, RunManager, Scheduler, resolveAgentsDir, resolveLogsDir, DATA_DIR, openDb } = require('@oneshot/core');
+const { TERMINAL_STATUSES } = require('@oneshot/core/src/constants');
 
 const agentsDir = resolveAgentsDir();
 const [,, command, ...rest] = process.argv;
@@ -73,17 +74,19 @@ if (command === 'info') {
 
 if (command === 'clear') {
   const manager = new RunManager({ db: getDb(), logsDir: resolveLogsDir(), agentsDir });
-  const runs = manager.listRuns({});
-  const clearable = runs.filter(r => r.status !== 'running' && r.status !== 'pending');
+  // Counted in SQL — hydrating every run just to size a prompt is what this
+  // whole table's reads were fixed to stop doing.
+  const counts = manager.countRunsByStatus();
+  const clearable = [...TERMINAL_STATUSES].reduce((sum, status) => sum + (counts[status] || 0), 0);
 
-  if (clearable.length === 0) {
+  if (clearable === 0) {
     console.log('No completed or failed runs to clear.');
     process.exit(0);
   }
 
   const readline = require('readline');
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  rl.question(`Clear ${clearable.length} completed/failed runs? (y/n) `, async (answer) => {
+  rl.question(`Clear ${clearable} completed/failed runs? (y/n) `, async (answer) => {
     rl.close();
     if (answer.toLowerCase() !== 'y') {
       console.log('Cancelled.');

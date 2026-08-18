@@ -49,7 +49,9 @@ router.post('/agents/:agent/dispatch', validateParams, async (req, res, next) =>
       }
     }
 
-    const { run } = await manager.dispatchRun(agent, body);
+    // Forced, not taken from the body: `source` is provenance, not a caller
+    // option, and the dashboard now labels runs by it.
+    const { run } = await manager.dispatchRun(agent, { ...body, source: 'server' });
     res.status(201).json({ runId: run.id, status: run.status });
   } catch (err) {
     if (err.code === 'ENOENT') {

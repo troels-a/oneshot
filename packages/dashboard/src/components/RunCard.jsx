@@ -31,11 +31,21 @@ const statusBgColors = {
   pending: 'var(--yellow-bg)',
 };
 
+const SOURCE_LABELS = {
+  cli: 'CLI',
+  schedule: 'Scheduled',
+  webhook: 'Webhook',
+  spawn: 'Spawned',
+  server: 'API',
+};
+
 export default function RunCard({ run, onClick, onRefresh }) {
   const duration = formatDuration(run);
   const color = statusColors[run.status] || 'var(--text-muted)';
   const bgColor = statusBgColors[run.status] || 'transparent';
-  const source = run.source === 'schedule' ? 'Scheduled' : run.source === 'cli' ? 'CLI' : 'API';
+  // Runs recorded before provenance was tagged all read 'server', so older
+  // scheduled runs show as API. Unknown values fall through as-is.
+  const source = SOURCE_LABELS[run.source] || run.source || 'Unknown';
 
   return (
     <div className="run-card" onClick={onClick}>

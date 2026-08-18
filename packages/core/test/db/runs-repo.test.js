@@ -30,6 +30,12 @@ describe('runs repo', () => {
     runs = createRunsRepo(db);
   });
 
+  function seedThree() {
+    runs.insertRun(makeRun({ id: 'r1', agentName: 'a', status: 'completed', startedAt: '2026-01-01T00:00:01Z' }));
+    runs.insertRun(makeRun({ id: 'r2', agentName: 'b', status: 'failed', startedAt: '2026-01-01T00:00:02Z' }));
+    runs.insertRun(makeRun({ id: 'r3', agentName: 'a', status: 'completed', startedAt: '2026-01-01T00:00:03Z' }));
+  }
+
   it('round-trips a run with JSON fields', () => {
     const run = makeRun({
       worktree: { dir: '/wt/abc', branch: 'feature/x' },
@@ -84,6 +90,75 @@ describe('runs repo', () => {
     const run = makeRun();
     assert.strictEqual(runs.insertRunOrIgnore(run), true);
     assert.strictEqual(runs.insertRunOrIgnore(run), false);
+    closeDb(dir);
+  });
+  it('lists all runs when no limit is given', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({}).map((r) => r.id), ['r3', 'r2', 'r1']);
+    closeDb(dir);
+  });
+
+  it('applies limit and offset in started_at DESC order', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ limit: 2 }).map((r) => r.id), ['r3', 'r2']);
+    assert.deepStrictEqual(runs.listRuns({ limit: 2, offset: 2 }).map((r) => r.id), ['r1']);
+    assert.deepStrictEqual(runs.listRuns({ limit: 2, offset: 99 }).map((r) => r.id), []);
+    closeDb(dir);
+  });
+
+  it('applies limit and offset alongside status and agent filters', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ status: 'completed', limit: 1 }).map((r) => r.id), ['r3']);
+    assert.deepStrictEqual(runs.listRuns({ agent: 'a', limit: 1, offset: 1 }).map((r) => r.id), ['r1']);
+    assert.deepStrictEqual(
+      runs.listRuns({ status: 'completed', agent: 'a', limit: 1 }).map((r) => r.id),
+      ['r3'],
+    );
+    closeDb(dir);
+  });
+
+  it('counts runs honouring the same filters', () => {
+    seedThree();
+    assert.strictEqual(runs.countRuns({}), 3);
+    assert.strictEqual(runs.countRuns({ status: 'completed' }), 2);
+    assert.strictEqual(runs.countRuns({ agent: 'a' }), 2);
+    assert.strictEqual(runs.countRuns({ status: 'failed', agent: 'a' }), 0);
+    closeDb(dir);
+  });
+
+  it('counts runs grouped by status', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.countRunsByStatus(), { completed: 2, failed: 1 });
+    closeDb(dir);
+  });
+  it('coerces numeric-string bounds instead of silently reading the whole table', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ limit: '2' }).map((r) => r.id), ['r3', 'r2']);
+    assert.deepStrictEqual(runs.listRuns({ limit: '2', offset: '2' }).map((r) => r.id), ['r1']);
+    closeDb(dir);
+  });
+
+  it('throws rather than falling back to unbounded on a malformed limit', () => {
+    seedThree();
+    assert.throws(() => runs.listRuns({ limit: 'abc' }), /limit must be a non-negative number/);
+    assert.throws(() => runs.listRuns({ limit: -5 }), /limit must be a non-negative number/);
+    assert.throws(() => runs.listRuns({ offset: 'abc' }), /offset must be a non-negative number/);
+    closeDb(dir);
+  });
+
+  it('treats an absent limit as unbounded and applies offset on its own', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ offset: 1 }).map((r) => r.id), ['r2', 'r1']);
+    assert.deepStrictEqual(runs.listRuns({ limit: 0 }).map((r) => r.id), []);
+    closeDb(dir);
+  });
+  it('counts runs per agent with a running tally', () => {
+    seedThree();
+    runs.insertRun(makeRun({ id: 'r4', agentName: 'a', status: 'running', startedAt: '2026-01-01T00:00:04Z' }));
+    assert.deepStrictEqual(runs.countRunsByAgent(), {
+      a: { total: 3, running: 1 },
+      b: { total: 1, running: 0 },
+    });
     closeDb(dir);
   });
 });

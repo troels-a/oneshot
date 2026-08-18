@@ -85,6 +85,18 @@ describe('POST /webhooks/:id (ingest)', () => {
     assert.strictEqual(JSON.parse(args.payload).payload.name, 'site');
   });
 
+  it('tags webhook-triggered runs with source "webhook"', async () => {
+    const { app, webhooks, manager } = setup();
+    const w = webhooks.createWebhook('vercel-deploy-notify', {});
+
+    await request(app)
+      .post(`/webhooks/${w.id}`)
+      .send({ type: 'deployment.error' })
+      .expect(202);
+
+    assert.strictEqual(manager.dispatched[0].options.source, 'webhook');
+  });
+
   it('accepts a valid HMAC signature', async () => {
     const { app, webhooks, manager } = setup();
     const secret = 'sek';

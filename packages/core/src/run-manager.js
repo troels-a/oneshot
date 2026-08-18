@@ -54,6 +54,18 @@ class RunManager {
     return dbRuns.map((row) => this.runs.get(row.id) || row);
   }
 
+  countRuns(filters = {}) {
+    return this._runs.countRuns(filters);
+  }
+
+  countRunsByStatus() {
+    return this._runs.countRunsByStatus();
+  }
+
+  countRunsByAgent() {
+    return this._runs.countRunsByAgent();
+  }
+
   getRunningRun(agentName) {
     for (const run of this.runs.values()) {
       if (run.agentName === agentName && run.status === RUN_STATUS.RUNNING) return run;

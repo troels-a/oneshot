@@ -2,17 +2,22 @@ const { Router } = require('express');
 const router = Router();
 
 router.get('/stats', (req, res) => {
-  const runs = req.runManager.listRuns({});
-  const active = runs.filter((r) => r.status === 'running').length;
-  const completed = runs.filter((r) => r.status === 'completed').length;
-  const failed = runs.filter((r) => r.status === 'failed').length;
-  const timedOut = runs.filter((r) => r.status === 'timed_out').length;
-  const pending = runs.filter((r) => r.status === 'pending').length;
-  const total = runs.length;
+  // A single GROUP BY, not a full hydration of every run row.
+  const counts = req.runManager.countRunsByStatus();
+  const active = counts.running || 0;
+  const completed = counts.completed || 0;
+  const failed = counts.failed || 0;
+  const timedOut = counts.timed_out || 0;
+  const pending = counts.pending || 0;
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const finished = completed + failed + timedOut;
   const successRate = finished > 0 ? Math.round((completed / finished) * 1000) / 10 : 0;
 
-  res.json({ active, total, completed, failed, timedOut, pending, successRate });
+  // Per-agent tallies come from SQL too — the agent cards must not derive counts
+  // from whichever page of runs the client happens to be holding.
+  const byAgent = req.runManager.countRunsByAgent();
+
+  res.json({ active, total, completed, failed, timedOut, pending, successRate, byAgent });
 });
 
 module.exports = router;

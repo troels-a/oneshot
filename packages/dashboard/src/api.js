@@ -48,6 +48,8 @@ export async function fetchRuns(filters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set('status', filters.status);
   if (filters.agent) params.set('agent', filters.agent);
+  if (filters.limit != null) params.set('limit', String(filters.limit));
+  if (filters.offset != null) params.set('offset', String(filters.offset));
   const qs = params.toString();
   const res = await request(`/runs${qs ? `?${qs}` : ''}`);
   return res.json();

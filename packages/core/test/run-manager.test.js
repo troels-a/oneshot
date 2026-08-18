@@ -435,4 +435,51 @@ exit 0
       assert.strictEqual('somethingUnknown' in dispatched[0].opts, false);
     });
   });
+  it('forwards pagination and count queries to the runs repo', () => {
+    const { manager, db } = makeManager('pagination');
+    const repo = require('../src/db').createRepos(db).runs;
+    for (let i = 1; i <= 3; i++) {
+      repo.insertRun({
+        id: `p${i}`, agentName: 'a', source: 'server', status: 'completed',
+        pid: i, startedAt: `2026-01-01T00:00:0${i}Z`, completedAt: null,
+        exitCode: 0, options: {}, cwd: '/tmp', logDir: '/tmp/x',
+      });
+    }
+
+    assert.deepStrictEqual(manager.listRuns({ limit: 2 }).map((r) => r.id), ['p3', 'p2']);
+    assert.deepStrictEqual(manager.listRuns({ limit: 2, offset: 2 }).map((r) => r.id), ['p1']);
+    assert.strictEqual(manager.countRuns({}), 3);
+    assert.strictEqual(manager.countRuns({ status: 'completed' }), 3);
+    assert.deepStrictEqual(manager.countRunsByStatus(), { completed: 3 });
+  });
+  it('overlays in-memory runs onto the paged rows', () => {
+    const { manager, db } = makeManager('overlay-pagination');
+    const repo = require('../src/db').createRepos(db).runs;
+    for (let i = 1; i <= 3; i++) {
+      repo.insertRun({
+        id: `o${i}`, agentName: 'a', source: 'server', status: 'completed',
+        pid: i, startedAt: `2026-01-01T00:00:0${i}Z`, completedAt: null,
+        exitCode: 0, options: {}, cwd: '/tmp', logDir: '/tmp/x',
+      });
+    }
+    // A live run: newest by started_at, and its in-memory object carries state
+    // the DB row does not yet have.
+    const live = {
+      id: 'o4', agentName: 'a', source: 'server', status: 'running',
+      pid: 4, startedAt: '2026-01-01T00:00:04Z', completedAt: null,
+      exitCode: null, options: {}, cwd: '/tmp', logDir: '/tmp/x',
+    };
+    repo.insertRun(live);
+    manager.runs.set(live.id, { ...live, result: 'in-memory only' });
+
+    // Newest-first, so the live run lands on page 0 and is never paged past.
+    const firstPage = manager.listRuns({ limit: 2 });
+    assert.deepStrictEqual(firstPage.map((r) => r.id), ['o4', 'o3']);
+    assert.strictEqual(firstPage[0].result, 'in-memory only');
+
+    // ...and appears exactly once across the pages, not duplicated.
+    const secondPage = manager.listRuns({ limit: 2, offset: 2 });
+    assert.deepStrictEqual(secondPage.map((r) => r.id), ['o2', 'o1']);
+    manager.runs.delete(live.id);
+  });
 });
