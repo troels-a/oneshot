@@ -106,7 +106,7 @@ function createIngestRouter({ runManager, webhooks, agentsDir }) {
         }
       }
 
-      const { run } = await runManager.dispatchRun(webhook.agent, { args });
+      const { run } = await runManager.dispatchRun(webhook.agent, { args, source: 'webhook' });
       webhooks.recordTrigger(webhook.id, run.id);
       res.status(202).json({ runId: run.id });
     } catch (err) {

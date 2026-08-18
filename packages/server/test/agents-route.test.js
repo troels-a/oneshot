@@ -50,6 +50,20 @@ describe('POST /agents/:agent/dispatch', () => {
     rmSync(TMP, { recursive: true, force: true });
   });
 
+  it('forces source to "server" so a request body cannot spoof provenance', async () => {
+    const agentsDir = path.join(TMP, 'agents-source');
+    writeAgent(agentsDir, 'noop', '---\nruntime: bash\n---\nbody');
+    const manager = fakeManager();
+    const app = makeApp(manager, agentsDir);
+
+    const res = await request(app)
+      .post('/agents/noop/dispatch')
+      .send({ args: { task: 'go' }, source: 'schedule' });
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(manager.dispatched[0].options.source, 'server');
+  });
+
   it('forwards a top-level branch field to runManager.dispatchRun', async () => {
     const agentsDir = path.join(TMP, 'agents-branch');
     writeAgent(agentsDir, 'noop', '---\nruntime: bash\n---\nbody');

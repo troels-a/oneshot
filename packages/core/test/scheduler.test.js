@@ -134,3 +134,42 @@ describe('Scheduler multi_instance', () => {
     assert.strictEqual(schedule.lastRunResult, 'skipped');
   });
 });
+
+describe('Scheduler run provenance', () => {
+  before(() => {
+    rmSync(TMP, { recursive: true, force: true });
+    mkdirSync(TMP, { recursive: true });
+  });
+
+  after(() => {
+    rmSync(TMP, { recursive: true, force: true });
+  });
+
+  it('tags dispatched runs with source "schedule"', async () => {
+    const { scheduler, runManager, agentsDir } = makeScheduler('source-tag');
+    writeAgent(agentsDir, 'tagged', '---\nruntime: bash\n---\nbody');
+
+    const schedule = scheduler.createSchedule('tagged', { cron: '* * * * *' });
+    scheduler._stopTask(schedule.id);
+
+    await scheduler._onTick(schedule);
+
+    assert.strictEqual(runManager.dispatched.length, 1);
+    assert.strictEqual(runManager.dispatched[0].options.source, 'schedule');
+  });
+
+  it('does not let a stored schedule option override the source', async () => {
+    const { scheduler, runManager, agentsDir } = makeScheduler('source-override');
+    writeAgent(agentsDir, 'spoof', '---\nruntime: bash\n---\nbody');
+
+    const schedule = scheduler.createSchedule('spoof', {
+      cron: '* * * * *',
+      options: { source: 'cli' },
+    });
+    scheduler._stopTask(schedule.id);
+
+    await scheduler._onTick(schedule);
+
+    assert.strictEqual(runManager.dispatched[0].options.source, 'schedule');
+  });
+});

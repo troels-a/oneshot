@@ -155,7 +155,9 @@ class Scheduler {
     }
 
     try {
-      await this.runManager.dispatchRun(schedule.agent, schedule.options);
+      // Tag provenance so a scheduled run is distinguishable from a manual
+      // API dispatch in the UI. Set last so a stored option cannot override it.
+      await this.runManager.dispatchRun(schedule.agent, { ...schedule.options, source: 'schedule' });
       schedule.lastRunResult = SCHEDULE_RESULT.DISPATCHED;
     } catch (err) {
       console.error(`Schedule ${schedule.id} dispatch error:`, err.message);
