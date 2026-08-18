@@ -62,6 +62,10 @@ class RunManager {
     return this._runs.countRunsByStatus();
   }
 
+  countRunsByAgent() {
+    return this._runs.countRunsByAgent();
+  }
+
   getRunningRun(agentName) {
     for (const run of this.runs.values()) {
       if (run.agentName === agentName && run.status === RUN_STATUS.RUNNING) return run;

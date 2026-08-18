@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchAgents, fetchRuns, fetchStats, fetchAllSchedules, fetchAllWebhooks, clearRuns, createSchedule, createWebhook } from '../api';
 import RunCard from './RunCard';
 import ScheduleCard from './ScheduleCard';
@@ -14,6 +14,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [runs, setRuns] = useState([]);
   const [total, setTotal] = useState(0);
   const [clearableCount, setClearableCount] = useState(0);
+  const [runsByAgent, setRunsByAgent] = useState({});
   const [schedules, setSchedules] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [agentFilter, setAgentFilter] = useState('');
@@ -28,7 +29,12 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
   const [webhookError, setWebhookError] = useState('');
   const [createdWebhookUrl, setCreatedWebhookUrl] = useState('');
 
+  // Paging and polling overlap: a slow request for the previous page must not
+  // land after a newer one and paint stale rows under the new page label.
+  const requestId = useRef(0);
+
   const loadData = useCallback(async () => {
+    const id = ++requestId.current;
     try {
       const [agentList, runPage, stats] = await Promise.all([
         fetchAgents(),
@@ -40,6 +46,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
         }),
         fetchStats(),
       ]);
+      if (id !== requestId.current) return;
       setAgents(agentList);
       // Rows arrive started_at DESC from SQL, already limited to this page.
       setRuns(runPage.runs);
@@ -47,15 +54,16 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
       // Counted server-side: the Clear button must reflect every clearable run,
       // not just the ones on the current page.
       setClearableCount(stats.completed + stats.failed + stats.timedOut);
+      setRunsByAgent(stats.byAgent || {});
 
       if (tab === 'schedules') {
         const allSchedules = await fetchAllSchedules();
-        setSchedules(allSchedules);
+        if (id === requestId.current) setSchedules(allSchedules);
       }
 
       if (tab === 'webhooks') {
         const allWebhooks = await fetchAllWebhooks();
-        setWebhooks(allWebhooks);
+        if (id === requestId.current) setWebhooks(allWebhooks);
       }
     } catch (err) {
       console.error('Failed to load data:', err);
@@ -69,12 +77,6 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
     const interval = setInterval(loadData, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [loadData]);
-
-  // A filter change shrinks the result set, so an offset carried over from the
-  // previous filter could strand the view on an empty page.
-  useEffect(() => {
-    setPage(0);
-  }, [statusFilter, agentFilter]);
 
   async function handleCreateSchedule({ agent, cron, enabled, options, name }) {
     setCreateSaving(true);
@@ -173,7 +175,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
               {totalPages > 1 && (
                 <div className="pagination">
                   <button disabled={clampedPage === 0} onClick={() => setPage(p => p - 1)}>Prev</button>
-                  <span>{total === 0 ? 0 : start + 1}–{Math.min(start + PAGE_SIZE, total)} of {total}</span>
+                  <span>{start + 1}–{Math.min(start + PAGE_SIZE, total)} of {total}</span>
                   <button disabled={clampedPage >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
                 </div>
               )}
@@ -194,8 +196,8 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
           ) : (
             <div className="agent-grid">
               {agents.map((agent) => {
-                const agentRuns = runs.filter((r) => r.agentName === agent.name);
-                const running = agentRuns.filter((r) => r.status === 'running').length;
+                // Counted server-side: `runs` only holds the current page.
+                const { total: agentRunCount = 0, running = 0 } = runsByAgent[agent.name] || {};
                 return (
                   <div key={agent.name} className="agent-card" onClick={() => onSelectAgent(agent.name)} style={{cursor: 'pointer'}}>
                     <div className="agent-card-header">
@@ -203,7 +205,7 @@ export default function Dashboard({ tab, onSelectRun, onSelectAgent }) {
                       <span className="badge badge-runtime-hollow">{agent.runtime}</span>
                     </div>
                     <div className="agent-stats">
-                      <span>{agentRuns.length} runs</span>
+                      <span>{agentRunCount} runs</span>
                       {running > 0 && <span className="badge badge-activity">{running} running</span>}
                     </div>
                   </div>

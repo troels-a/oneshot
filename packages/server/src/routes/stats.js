@@ -13,7 +13,11 @@ router.get('/stats', (req, res) => {
   const finished = completed + failed + timedOut;
   const successRate = finished > 0 ? Math.round((completed / finished) * 1000) / 10 : 0;
 
-  res.json({ active, total, completed, failed, timedOut, pending, successRate });
+  // Per-agent tallies come from SQL too — the agent cards must not derive counts
+  // from whichever page of runs the client happens to be holding.
+  const byAgent = req.runManager.countRunsByAgent();
+
+  res.json({ active, total, completed, failed, timedOut, pending, successRate, byAgent });
 });
 
 module.exports = router;
