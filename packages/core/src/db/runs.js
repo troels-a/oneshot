@@ -110,10 +110,17 @@ function createRunsRepo(db) {
   const getRunningByAgentStmt = db.prepare(`${SELECT_RUN} WHERE agent_name = ? AND status = 'running' LIMIT 1`);
   const listRunningStmt = db.prepare(`${SELECT_RUN} WHERE status = 'running'`);
 
-  const listAllStmt = db.prepare(`${SELECT_RUN} ORDER BY started_at DESC`);
-  const listByStatusStmt = db.prepare(`${SELECT_RUN} WHERE status = ? ORDER BY started_at DESC`);
-  const listByAgentStmt = db.prepare(`${SELECT_RUN} WHERE agent_name = ? ORDER BY started_at DESC`);
-  const listByStatusAgentStmt = db.prepare(`${SELECT_RUN} WHERE status = ? AND agent_name = ? ORDER BY started_at DESC`);
+  const PAGE = 'ORDER BY started_at DESC LIMIT ? OFFSET ?';
+  const listAllStmt = db.prepare(`${SELECT_RUN} ${PAGE}`);
+  const listByStatusStmt = db.prepare(`${SELECT_RUN} WHERE status = ? ${PAGE}`);
+  const listByAgentStmt = db.prepare(`${SELECT_RUN} WHERE agent_name = ? ${PAGE}`);
+  const listByStatusAgentStmt = db.prepare(`${SELECT_RUN} WHERE status = ? AND agent_name = ? ${PAGE}`);
+
+  const countAllStmt = db.prepare('SELECT COUNT(*) AS c FROM runs');
+  const countByStatusStmt = db.prepare('SELECT COUNT(*) AS c FROM runs WHERE status = ?');
+  const countByAgentStmt = db.prepare('SELECT COUNT(*) AS c FROM runs WHERE agent_name = ?');
+  const countByStatusAgentStmt = db.prepare('SELECT COUNT(*) AS c FROM runs WHERE status = ? AND agent_name = ?');
+  const countGroupedStmt = db.prepare('SELECT status, COUNT(*) AS c FROM runs GROUP BY status');
 
   const deleteCompletedStmt = db.prepare(`DELETE FROM runs WHERE status NOT IN ('running','pending')`);
   const listCompletedIdsLogDirsStmt = db.prepare(`SELECT id, log_dir FROM runs WHERE status NOT IN ('running','pending')`);
@@ -169,13 +176,31 @@ function createRunsRepo(db) {
       return listRunningStmt.all().map(rowToRun);
     },
 
-    listRuns({ status, agent } = {}) {
+    listRuns({ status, agent, limit, offset } = {}) {
+      // SQLite reads a negative LIMIT as "no limit", so the same prepared
+      // statement serves both the paged and unpaged callers.
+      const lim = Number.isInteger(limit) && limit >= 0 ? limit : -1;
+      const off = Number.isInteger(offset) && offset > 0 ? offset : 0;
+
       let rows;
-      if (status && agent) rows = listByStatusAgentStmt.all(status, agent);
-      else if (status) rows = listByStatusStmt.all(status);
-      else if (agent) rows = listByAgentStmt.all(agent);
-      else rows = listAllStmt.all();
+      if (status && agent) rows = listByStatusAgentStmt.all(status, agent, lim, off);
+      else if (status) rows = listByStatusStmt.all(status, lim, off);
+      else if (agent) rows = listByAgentStmt.all(agent, lim, off);
+      else rows = listAllStmt.all(lim, off);
       return rows.map(rowToRun);
+    },
+
+    countRuns({ status, agent } = {}) {
+      if (status && agent) return countByStatusAgentStmt.get(status, agent).c;
+      if (status) return countByStatusStmt.get(status).c;
+      if (agent) return countByAgentStmt.get(agent).c;
+      return countAllStmt.get().c;
+    },
+
+    countRunsByStatus() {
+      const counts = {};
+      for (const row of countGroupedStmt.all()) counts[row.status] = row.c;
+      return counts;
     },
 
     deleteCompletedRuns() {

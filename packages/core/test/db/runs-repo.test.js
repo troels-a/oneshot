@@ -86,4 +86,49 @@ describe('runs repo', () => {
     assert.strictEqual(runs.insertRunOrIgnore(run), false);
     closeDb(dir);
   });
+  function seedThree() {
+    runs.insertRun(makeRun({ id: 'r1', agentName: 'a', status: 'completed', startedAt: '2026-01-01T00:00:01Z' }));
+    runs.insertRun(makeRun({ id: 'r2', agentName: 'b', status: 'failed', startedAt: '2026-01-01T00:00:02Z' }));
+    runs.insertRun(makeRun({ id: 'r3', agentName: 'a', status: 'completed', startedAt: '2026-01-01T00:00:03Z' }));
+  }
+
+  it('lists all runs when no limit is given', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({}).map((r) => r.id), ['r3', 'r2', 'r1']);
+    closeDb(dir);
+  });
+
+  it('applies limit and offset in started_at DESC order', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ limit: 2 }).map((r) => r.id), ['r3', 'r2']);
+    assert.deepStrictEqual(runs.listRuns({ limit: 2, offset: 2 }).map((r) => r.id), ['r1']);
+    assert.deepStrictEqual(runs.listRuns({ limit: 2, offset: 99 }).map((r) => r.id), []);
+    closeDb(dir);
+  });
+
+  it('applies limit and offset alongside status and agent filters', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.listRuns({ status: 'completed', limit: 1 }).map((r) => r.id), ['r3']);
+    assert.deepStrictEqual(runs.listRuns({ agent: 'a', limit: 1, offset: 1 }).map((r) => r.id), ['r1']);
+    assert.deepStrictEqual(
+      runs.listRuns({ status: 'completed', agent: 'a', limit: 1 }).map((r) => r.id),
+      ['r3'],
+    );
+    closeDb(dir);
+  });
+
+  it('counts runs honouring the same filters', () => {
+    seedThree();
+    assert.strictEqual(runs.countRuns({}), 3);
+    assert.strictEqual(runs.countRuns({ status: 'completed' }), 2);
+    assert.strictEqual(runs.countRuns({ agent: 'a' }), 2);
+    assert.strictEqual(runs.countRuns({ status: 'failed', agent: 'a' }), 0);
+    closeDb(dir);
+  });
+
+  it('counts runs grouped by status', () => {
+    seedThree();
+    assert.deepStrictEqual(runs.countRunsByStatus(), { completed: 2, failed: 1 });
+    closeDb(dir);
+  });
 });
