@@ -435,4 +435,21 @@ exit 0
       assert.strictEqual('somethingUnknown' in dispatched[0].opts, false);
     });
   });
+  it('forwards pagination and count queries to the runs repo', () => {
+    const { manager, db } = makeManager('pagination');
+    const repo = require('../src/db').createRepos(db).runs;
+    for (let i = 1; i <= 3; i++) {
+      repo.insertRun({
+        id: `p${i}`, agentName: 'a', source: 'server', status: 'completed',
+        pid: i, startedAt: `2026-01-01T00:00:0${i}Z`, completedAt: null,
+        exitCode: 0, options: {}, cwd: '/tmp', logDir: '/tmp/x',
+      });
+    }
+
+    assert.deepStrictEqual(manager.listRuns({ limit: 2 }).map((r) => r.id), ['p3', 'p2']);
+    assert.deepStrictEqual(manager.listRuns({ limit: 2, offset: 2 }).map((r) => r.id), ['p1']);
+    assert.strictEqual(manager.countRuns({}), 3);
+    assert.strictEqual(manager.countRuns({ status: 'completed' }), 3);
+    assert.deepStrictEqual(manager.countRunsByStatus(), { completed: 3 });
+  });
 });
