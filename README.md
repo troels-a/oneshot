@@ -10,7 +10,7 @@
 
 ---
 
-Oneshot is built for running autonomous agents on remote servers. Define agents as simple Markdown files — Claude prompts, Codex prompts, Node.js scripts, or Bash scripts — and fire them off on-demand or on a cron schedule through a REST API, CLI, or web dashboard. Deploy it on a VPS and use it as the backbone for your agent infrastructure.
+Oneshot is built for running autonomous agents on remote servers. Define agents as simple Markdown files — Claude prompts, Codex prompts, Mistral Vibe prompts, Node.js scripts, or Bash scripts — and fire them off on-demand or on a cron schedule through a REST API, CLI, or web dashboard. Deploy it on a VPS and use it as the backbone for your agent infrastructure.
 
 ## Install
 
@@ -78,8 +78,24 @@ Add `worktree: true` to the frontmatter to run each invocation in an isolated gi
 |---------|---------|----------|
 | `claude` | A prompt passed to `claude -p` | Tasks needing an AI agent with tool access |
 | `codex` | A prompt passed to `codex exec` | Tasks needing a Codex coding agent |
+| `vibe` | A prompt passed to `vibe --prompt` | Mistral Vibe coding tasks |
 | `node` | JavaScript executed via `node` | Programmatic / API tasks |
 | `bash` | A shell script executed via `bash` | Shell automation |
+
+Mistral Vibe must be installed and configured with its config/env key before dispatch, for example through `~/.vibe/config.toml` and `MISTRAL_API_KEY`.
+
+```yaml
+---
+runtime: vibe
+runtimeOptions:
+  maxTurns: 5
+  agent: auto-approve
+  trust: true
+  enabledTools: "bash*, edit_file"
+---
+
+Review the current branch and make the requested change.
+```
 
 ### Args and Commands
 

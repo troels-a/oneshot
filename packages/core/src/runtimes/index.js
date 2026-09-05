@@ -2,8 +2,9 @@ const bash = require('./bash');
 const claude = require('./claude');
 const codex = require('./codex');
 const node = require('./node');
+const vibe = require('./vibe');
 
-const runtimeMap = new Map([bash, claude, codex, node].map(runtime => [runtime.name, runtime]));
+const runtimeMap = new Map([bash, claude, codex, node, vibe].map(runtime => [runtime.name, runtime]));
 
 function getRuntime(name) {
   return runtimeMap.get(name) || null;

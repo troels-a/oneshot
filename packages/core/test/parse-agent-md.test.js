@@ -129,6 +129,45 @@ body`);
     });
   });
 
+  it('parses vibe runtime options and applies defaults', () => {
+    const p = writeAgent(`---
+runtime: vibe
+runtimeOptions:
+  maxTurns: 8
+  agent: plan
+  trust: false
+  enabledTools: "bash*, edit_file\\nre:^serena_.*$"
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.strictEqual(result.runtime, 'vibe');
+    assert.deepStrictEqual(result.runtimeOptions, {
+      maxTurns: '8',
+      agent: 'plan',
+      trust: false,
+      enabledTools: ['bash*', 'edit_file', 're:^serena_.*$'],
+    });
+  });
+
+  it('defaults and normalizes invalid vibe runtime options', () => {
+    const p = writeAgent(`---
+runtime: vibe
+runtimeOptions:
+  maxTurns: 0
+  agent: unknown
+---
+body`);
+
+    const result = parseAgentMd(p);
+    assert.deepStrictEqual(result.runtimeOptions, {
+      maxTurns: '5',
+      agent: 'auto-approve',
+      trust: true,
+      enabledTools: [],
+    });
+  });
+
   it('accepts runtime_options alias for backwards compatibility', () => {
     const p = writeAgent(`---
 runtime: codex

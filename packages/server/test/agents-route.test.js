@@ -153,6 +153,32 @@ describe('agent CRUD runtime validation', () => {
     assert.strictEqual(res.body.runtimeOptions.sandboxMode, 'danger-full-access');
   });
 
+  it('creates a vibe agent with runtime options', async () => {
+    const agentsDir = path.join(TMP, 'agents-create-vibe');
+    mkdirSync(agentsDir, { recursive: true });
+    const app = makeApp(fakeManager(), agentsDir);
+
+    const res = await request(app)
+      .post('/agents')
+      .send({
+        name: 'vibe-agent',
+        runtime: 'vibe',
+        body: 'Review this branch.',
+        runtimeOptions: {
+          maxTurns: '7',
+          agent: 'plan',
+          trust: false,
+          enabledTools: 'bash*',
+        },
+      });
+
+    assert.strictEqual(res.status, 201);
+    assert.strictEqual(res.body.runtime, 'vibe');
+    assert.strictEqual(res.body.runtimeOptions.maxTurns, '7');
+    assert.strictEqual(res.body.runtimeOptions.agent, 'plan');
+    assert.strictEqual(res.body.runtimeOptions.trust, false);
+  });
+
   it('rejects invalid runtime with descriptive error', async () => {
     const agentsDir = path.join(TMP, 'agents-invalid-runtime');
     mkdirSync(agentsDir, { recursive: true });

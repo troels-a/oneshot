@@ -41,6 +41,7 @@ describe('checkRuntimeAvailability', () => {
 describe('runtime checkAvailability methods', () => {
   it('each runtime has a checkAvailability method', () => {
     const runtimes = listRuntimes();
+    assert.ok(runtimes.some(runtime => runtime.name === 'vibe'));
     for (const runtime of runtimes) {
       assert.strictEqual(typeof runtime.checkAvailability, 'function', `${runtime.name} missing checkAvailability`);
     }

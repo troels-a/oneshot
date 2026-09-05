@@ -74,4 +74,69 @@ describe('extractResult', () => {
     assert.strictEqual(result, null);
     assert.strictEqual(meta, null);
   });
+
+  it('extracts vibe result and metadata from a single json object', () => {
+    const { db } = makeDb();
+    seedRun(db, 'r4');
+    createRepos(db).logs.appendLogLines('r4', 'stdout', [
+      JSON.stringify({
+        result: 'done',
+        turns: 3,
+        cost_usd: 0.12,
+        duration_ms: 1400,
+      }),
+    ], 0);
+
+    const { result, meta } = extractResult(db, 'r4', 'vibe');
+    assert.strictEqual(result, 'done');
+    assert.deepStrictEqual(meta, {
+      turns: 3,
+      num_turns: null,
+      cost: null,
+      cost_usd: 0.12,
+      total_cost_usd: null,
+      duration_ms: 1400,
+    });
+  });
+
+  it('extracts vibe result from json lines near the end', () => {
+    const { db } = makeDb();
+    seedRun(db, 'r5');
+    createRepos(db).logs.appendLogLines('r5', 'stdout', [
+      'Starting...',
+      '{"message":"intermediate"}',
+      '{"event":"usage","stats":{"num_turns":4,"total_cost_usd":0.2}}',
+      '{"event":"complete","payload":{"text":"final answer"}}',
+    ], 0);
+
+    const { result, meta } = extractResult(db, 'r5', 'vibe');
+    assert.strictEqual(result, 'final answer');
+    assert.deepStrictEqual(meta, {
+      turns: null,
+      num_turns: 4,
+      cost: null,
+      cost_usd: null,
+      total_cost_usd: 0.2,
+      duration_ms: null,
+    });
+  });
+
+  it('falls back to trimmed stdout for non-json vibe output', () => {
+    const { db } = makeDb();
+    seedRun(db, 'r6');
+    createRepos(db).logs.appendLogLines('r6', 'stdout', ['plain output'], 0);
+
+    const { result, meta } = extractResult(db, 'r6', 'vibe');
+    assert.strictEqual(result, 'plain output');
+    assert.strictEqual(meta, null);
+  });
+
+  it('returns null result and meta for empty vibe stdout', () => {
+    const { db } = makeDb();
+    seedRun(db, 'r7');
+
+    const { result, meta } = extractResult(db, 'r7', 'vibe');
+    assert.strictEqual(result, null);
+    assert.strictEqual(meta, null);
+  });
 });
